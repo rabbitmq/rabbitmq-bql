@@ -1,6 +1,7 @@
 PACKAGE=mod_bql
 DEPS=rabbitmq-server rabbitmq-erlang-client
 GENERATED_SOURCES=command_lexer command_parser
+EXTRA_PACKAGE_DIRS=scripts
 
 include ../include.mk
 

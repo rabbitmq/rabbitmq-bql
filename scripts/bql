@@ -31,16 +31,11 @@
 ##
 
 CURDIR=`dirname $0`
-ERLAMQP_BIN=$CURDIR/../../rabbitmq-erlang-client
-RABBIT_BIN=$CURDIR/../../rabbitmq-server
 
 exec erl \
     -pa "`dirname $0`/../ebin" \
-    -pa "$ERLAMQP_BIN/ebin" \
-    -pa "$RABBIT_BIN/ebin" \
     -noshell \
     -hidden \
-    ${RABBITMQ_CTL_ERL_ARGS} \
     -sname amqpbdl$$ \
     -s bql_client \
     -extra "$@"
