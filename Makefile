@@ -1,4 +1,8 @@
+include ../include.mk
+
 SHELL=/bin/bash
+
+PACKAGE=mod_bql
 
 SOURCE_DIR=src
 EBIN_DIR=ebin
@@ -34,6 +38,12 @@ $(EBIN_DIR)/%.beam: $(SOURCE_DIR)/%.erl
 
 test: all
 	$(ERL) -I -pa ebin -noshell -eval 'command_parser_test:test(), halt().'
+
+package: clean all
+	rm -rf $(DIST_DIR)
+	mkdir -p $(DIST_DIR)/$(PACKAGE)
+	cp -r $(EBIN_DIR) $(DIST_DIR)/$(PACKAGE)
+	(cd $(DIST_DIR); zip -r $(PACKAGE).ez $(PACKAGE))
 
 clean:
 	rm -f $(EBIN_DIR)/*.beam
