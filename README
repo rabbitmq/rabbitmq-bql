@@ -1,0 +1,4 @@
+AMQP BQL (Broker Query Language) provides a mechanism for interrogating and configuring
+an AMQP broker. It allows for a controlled process for handling change within the messaging broker.
+
+

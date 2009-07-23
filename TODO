@@ -1,0 +1,12 @@
+- Queue based access mechanism
+- Accept keywords as terms in predicates
+- Use keyword allowing the vhost to be switched
+
+Nice to haves:
+- drop connection force where user='guest' and host='host' and port='port';
+- drop connection where host='host' and port='port';
+- shutdown networking;
+- start networking;
+- Runlevel changes - ie, drop broker into a maintenance mode
+- Creating checkpoints (mnesia, and queues)
+- Activate checkpoint

@@ -1,0 +1,13 @@
+create durable exchange 'ArchivesEx';
+create durable queue 'ArchivesQ';
+create route from 'ArchivesEx' to 'ArchivesQ';
+drop route from 'ArchivesEx' to 'ArchivesQ';
+drop exchange 'ArchivesEx';
+drop queue 'ArchivesQ';
+
+create durable exchange 'ArchivesEx2';
+create durable queue 'ArchivesQ2';
+create route from 'ArchivesEx2' to 'ArchivesQ2' when routing_key is 'HelloWorld';
+drop route from 'ArchivesEx2' to 'ArchivesQ2' when routing_key is 'HelloWorld';
+drop queue 'ArchivesQ2';
+drop exchange 'ArchivesEx2';

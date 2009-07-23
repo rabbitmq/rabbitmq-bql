@@ -1,0 +1,5 @@
+syntax: glob
+ebin/*.beam
+src/command_lexer.erl
+src/command_parser.erl
+*.dump
