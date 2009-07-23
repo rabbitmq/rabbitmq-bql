@@ -6,4 +6,4 @@
   {registered, []},
   {mod, {bql_server, []}},
   {env, []},
-  {applications, [kernel, stdlib, crypto]}]}.
+  {applications, [kernel, stdlib, rabbit, amqp_client]}]}.
