@@ -118,79 +118,44 @@ apply_command(#state {node = Node}, {revoke, Privilege, User}) ->
   
 % Queries
 apply_command(#state {node = Node}, {select, "exchanges", Fields, Modifiers}) ->
-  FieldList = case Fields of
-    all -> [name, type, durable, auto_delete, arguments];
-    _   -> Fields
-  end,
-  debug("select(~p) from exchanges~n", [FieldList]),
+  FieldList = validate_fields([name, type, durable, auto_delete, arguments], Fields),
   Exchanges = rpc_call(Node, rabbit_exchange, info_all, [<<"/">>, FieldList]),
   interpret_response(FieldList, Exchanges, Modifiers);
 
 apply_command(#state {node = Node}, {select, "queues", Fields, Modifiers}) ->
-  FieldList = case Fields of
-    all -> [name, durable, auto_delete, arguments, pid, messages_ready,
+  FieldList = validate_fields(
+           [name, durable, auto_delete, arguments, pid, messages_ready,
             messages_unacknowledged, messages_uncommitted, messages, acks_uncommitted,
-            consumers, transactions, memory];
-    _   -> Fields
-  end,
-  debug("select(~p) from queues~n", [FieldList]),
+            consumers, transactions, memory],
+    	   Fields),
   Queues = rpc_call(Node, rabbit_amqqueue, info_all, [<<"/">>, FieldList]),
   interpret_response(FieldList, Queues, Modifiers);
 
 apply_command(#state {node = Node}, {select, "bindings", Fields, Modifiers}) ->
   AllFieldList = [exchange_name, queue_name, routing_key, args],
-  FieldList = case Fields of
-    all -> AllFieldList;
-    _   -> Fields
-  end,
-  debug("select(~p) from bindings~n", [FieldList]),
+  FieldList = validate_fields(AllFieldList, Fields),
   Bindings = rpc_call(Node, rabbit_exchange, list_bindings, [<<"/">>]),
   ZippedBindings = [lists:zip(AllFieldList, tuple_to_list(X)) || X <- Bindings],
   FilteredBindings = filter_rows(FieldList, ZippedBindings),
   interpret_response(FieldList, FilteredBindings, Modifiers);
 
 apply_command(#state {node = Node}, {select, "users", Fields, Modifiers}) ->
-  FieldList = case Fields of
-    all -> [name];
-    _   -> Fields
-  end,
-  debug("select(~p) from users~n", [FieldList]),
-  Users = case FieldList of
-    [name] ->
-        Response = rpc_call(Node, rabbit_access_control, list_users, []),
-        [[{name, binary_to_list(User)}] || User <- Response];
-    _      ->
-        % Simulate the bad argument response
-        {bad_argument, lists:last([F || F <- FieldList, not(F =:= name)])}
-  end,
+  AllFieldList = [name],
+  FieldList = validate_fields(AllFieldList, Fields),
+  Response = rpc_call(Node, rabbit_access_control, list_users, []),
+  Users = [[{name, binary_to_list(User)}] || User <- Response],
   interpret_response(FieldList, Users, Modifiers);
 
 apply_command(#state {node = Node}, {select, "vhosts", Fields, Modifiers}) ->
   AllFieldList = [name],
-  FieldList = case Fields of
-    all -> AllFieldList;
-    _   -> Fields
-  end,
-  debug("select(~p) from vhosts~n", [FieldList]),
-  validate_fields(AllFieldList, FieldList),
-  Users = case FieldList of
-    [name] ->
-        Response = rpc_call(Node, rabbit_access_control, list_vhosts, []),
-        [[{name, binary_to_list(User)}] || User <- Response];
-    _      ->
-        % Simulate the bad argument response
-        {bad_argument, lists:last([F || F <- FieldList, not(F =:= name)])}
-  end,
-  interpret_response(FieldList, Users, Modifiers);
+  FieldList = validate_fields(AllFieldList, Fields),
+  Response = rpc_call(Node, rabbit_access_control, list_vhosts, []),
+  VHosts = [[{name, binary_to_list(User)}] || User <- Response],
+  interpret_response(FieldList, VHosts, Modifiers);
 
 apply_command(#state {node = Node}, {select, "permissions", Fields, Modifiers}) ->
   AllFieldList = [username,configure_perm,write_perm,read_perm],
-  FieldList = case Fields of
-    all -> AllFieldList;
-    _   -> Fields
-  end,
-  debug("select(~p) from permissions~n", [FieldList]),
-  validate_fields(AllFieldList, FieldList),
+  FieldList = validate_fields(AllFieldList, Fields),
   Bindings = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [<<"/">>]),
   ZippedBindings = [lists:zip(AllFieldList, tuple_to_list(X)) || X <- Bindings],
   FilteredBindings = filter_rows(FieldList, ZippedBindings),
@@ -305,13 +270,17 @@ filter_rows(RequiredFields, Rows) ->
   [[Extract(Field, Row) || Field <- RequiredFields] || Row <- Rows].
 
 validate_fields(Available, Requested) ->
-  	AvailableSet = sets:from_list(Available),
-	RequestedSet = sets:from_list(Requested),
-	Invalid = sets:subtract(RequestedSet, AvailableSet),
-	case sets:size(Invalid) of
-		0 -> ok;
-		1 -> throw(lists:flatten(io_lib:format("The field ~p is invalid", sets:to_list(Invalid))));
-		_ -> throw(lists:flatten(io_lib:format("The fields ~p are invalid", [sets:to_list(Invalid)])))
+	case Requested of
+		all   -> Available;
+		_     ->
+  			AvailableSet = sets:from_list(Available),
+			RequestedSet = sets:from_list(Requested),
+			Invalid = sets:subtract(RequestedSet, AvailableSet),
+			case sets:size(Invalid) of
+				0 -> RequestedSet;
+				1 -> throw(lists:flatten(io_lib:format("The field ~p is invalid", sets:to_list(Invalid))));
+				_ -> throw(lists:flatten(io_lib:format("The fields ~p are invalid", [sets:to_list(Invalid)])))
+			end
 	end.
 
 % Privilege Helpers

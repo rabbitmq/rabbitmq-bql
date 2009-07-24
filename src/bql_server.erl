@@ -59,7 +59,7 @@ init([]) ->
 
 handle_call(Msg,_From,State = #state{}) ->
   case Msg of
-    {execute, Username, Password, Command} ->
+    {execute, _Username, _Password, Command} ->
       % rabbit_access_control:user_pass_login(Username, Password),
 
       % rabbit_access_control:check_resource_access(Username, Resource, Perm)

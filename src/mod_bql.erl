@@ -26,8 +26,8 @@
 
 -export([start/0, stop/0, start/2, stop/1]).
 
-start() -> application:start(?MODULE).
-stop() -> application:stop(?MODULE).
+start() -> mod_bql_sup:start_link(), ok.
+stop() -> ok.
 
 start(normal, []) ->
     mod_bql_sup:start_link().

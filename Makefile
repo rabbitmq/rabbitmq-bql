@@ -2,6 +2,9 @@ PACKAGE=mod_bql
 DEPS=rabbitmq-server rabbitmq-erlang-client
 GENERATED_SOURCES=command_lexer command_parser
 EXTRA_PACKAGE_DIRS=scripts
+TEST_APPS=mod_bql
+TEST_COMMANDS=command_parser_test:test() bql_test:test()
+START_RABBIT_IN_TESTS=true
 
 include ../include.mk
 
@@ -13,6 +16,3 @@ src/command_lexer.erl: ebin/leex.beam src/command_lexer.xrl
 
 src/command_parser.erl: ebin/leex.beam src/command_parser.yrl
 	$(ERL) -I -pa ebin -noshell -eval 'yecc:file("$(SOURCE_DIR)/$(PARSER_NAME)"), halt().'
-
-test: all
-	$(ERL) -I -pa ebin -noshell -eval 'command_parser_test:test(), halt().'
