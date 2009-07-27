@@ -22,6 +22,11 @@ drop_queue_test() ->
   ?assertEqual(0, length(Result)),
   ok.
 
+constrain_with_invalid_field_test() ->
+  Response = execute("select * from queues where invalid_field=something;"),
+  ?assertEqual(["Invalid field invalid_field specified in constraint"], Response),
+  ok.
+
 create_non_durable_exchange_test() ->
   [ok] = execute("create exchange mynondurableexchange;"),
   [{_, Result}] = execute("select * from exchanges where name=mynondurableexchange and 'durable'=false;"),
@@ -49,6 +54,18 @@ create_vhost_test() ->
 drop_vhost_test() ->
   [ok, ok] = execute("create vhost '/mytestvhostfordropping'; drop vhost '/mytestvhostfordropping';"),
   [{_, Result}] = execute("select * from vhosts where name='/mytestvhostfordropping';"),
+  ?assertEqual(0, length(Result)),
+  ok.
+
+create_user_test() ->
+  [ok] = execute("create user anewuser identified by password;"),
+  [{_, Result}] = execute("select * from users where name=anewuser;"),
+  ?assertEqual(1, length(Result)),
+  ok.
+
+drop_user_test() ->
+  [ok, ok] = execute("create user anotheruserfordropping identified by secret; drop user anotheruserfordropping;"),
+  [{_, Result}] = execute("select * from users where name=anotheruserfordropping;"),
   ?assertEqual(0, length(Result)),
   ok.
 

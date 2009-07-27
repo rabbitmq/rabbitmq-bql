@@ -121,7 +121,7 @@ apply_command(#state {node = Node}, {select, "users", Fields, Modifiers}) ->
   AllFieldList = [name],
   FieldList = validate_fields(AllFieldList, Fields),
   Response = rpc_call(Node, rabbit_access_control, list_users, []),
-  Users = [[{name, binary_to_list(User)}] || User <- Response],
+  Users = [[binary_to_list(User)] || User <- Response],
   interpret_response(AllFieldList, FieldList, Users, Modifiers);
 
 apply_command(#state {node = Node}, {select, "vhosts", Fields, Modifiers}) ->
@@ -195,7 +195,7 @@ apply_constraints(FieldList, Rows, {Constraint, Field, Value}) ->
     {value, {Field, FieldPosition}} -> 
       [Row || Row <- Rows, constraint_accepts(Constraint, lists:nth(FieldPosition, Row), Value)];
     false                           -> 
-      throw({invalid_constraint_field, Field})
+      throw(lists:flatten(io_lib:format("Invalid field ~s specified in constraint", [Field])))
   end.
 
 constraint_accepts(eq, Value, Expected) ->
