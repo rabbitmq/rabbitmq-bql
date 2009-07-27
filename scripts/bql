@@ -31,8 +31,9 @@
 ##
 
 CURDIR=`dirname $0`
+RLWRAP=`which rlwrap`
 
-exec erl \
+exec $RLWRAP erl \
     -pa "`dirname $0`/../ebin" \
     -noshell \
     -hidden \
