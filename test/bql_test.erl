@@ -40,6 +40,42 @@ drop_exchange_test() ->
   ?assertEqual(0, length(Result)),
   ok.
 
+create_vhost_test() ->
+  [ok] = execute("create vhost '/mytestvhost';"),
+  [{_, Result}] = execute("select * from vhosts where name='/mytestvhost';"),
+  ?assertEqual(1, length(Result)),
+  ok.
+
+drop_vhost_test() ->
+  [ok, ok] = execute("create vhost '/mytestvhostfordropping'; drop vhost '/mytestvhostfordropping';"),
+  [{_, Result}] = execute("select * from vhosts where name='/mytestvhostfordropping';"),
+  ?assertEqual(0, length(Result)),
+  ok.
+
+select_permission_with_where_clause_not_in_result_test() ->
+  [{_, Result}] = execute("select username from permissions where username='guest' and read_perm='.*';"),
+  ?assertEqual([[<<"guest">>]], Result),
+  ok.
+
+select_queue_with_where_clause_not_in_result_test() ->
+  [ok] = execute("create queue mynondurablequeue;"),
+  [{_, Result}] = execute("select 'durable' from queues where name='mynondurablequeue' and 'durable'=false;"),
+  ?assertEqual([[false]], Result),
+  ok.
+
+select_exchange_with_where_clause_not_in_result_test() ->
+  [ok] = execute("create exchange mynondurableexchange;"),
+  [{_, Result}] = execute("select 'durable' from exchanges where name='mynondurableexchange' and 'durable'=false;"),
+  ?assertEqual([[false]], Result),
+  ok.
+
+select_binding_with_where_clause_not_in_result_test() ->
+  [ok, ok] = execute("create exchange mynondurableexchange; create queue mynondurablequeue;"),
+  [ok] = execute("create route from mynondurableexchange to mynondurablequeue;"),
+  [{_, Result}] = execute("select queue_name from bindings where exchange_name='mynondurableexchange';"),
+  ?assertEqual([["mynondurablequeue"]], Result),
+  ok.
+
 execute(Command) ->
   {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, Command),
   Result.

@@ -45,13 +45,9 @@ apply_commands(Commands) ->
 
 % Queue Management
 apply_command(#state {ch = ControlCh}, {create_queue, Name, Durable}) ->
-  debug("create_queue(~p) (Durable: ~p)~n", [Name, Durable]),
-
   lib_amqp:declare_queue(ControlCh, #'queue.declare'{queue = list_to_binary(Name), durable = Durable}),
   ok;
 apply_command(#state {ch = ControlCh}, {drop_queue, Name}) ->
-  debug("delete_queue(~p)~n", [Name]),
-
   lib_amqp:delete_queue(ControlCh, list_to_binary(Name)),
   ok;
 apply_command(#state {ch = ControlCh}, {purge_queue, Name}) ->
@@ -60,51 +56,35 @@ apply_command(#state {ch = ControlCh}, {purge_queue, Name}) ->
 
 % Exchange Management
 apply_command(#state {ch = ControlCh}, {create_exchange, Name, Type, Durable}) ->
-  debug("create_exchange(~p) (Durable: ~p)~n", [Name, Durable]),
-
   amqp_channel:call(ControlCh, #'exchange.declare'{exchange = list_to_binary(Name),
                                                    type = list_to_binary(atom_to_list(Type)),
                                                    durable = Durable}),
   ok;
 apply_command(#state {ch = ControlCh}, {drop_exchange, Name}) ->
-  debug("delete_exchange(~p)~n", [Name]),
-
   lib_amqp:delete_exchange(ControlCh, list_to_binary(Name)),
   ok;
 
 % User Management
 apply_command(#state {node = Node}, {create_user, Name, Password}) ->
-  debug("create_user(~p)~n", [Name]),
-
   rpc_call(Node, rabbit_access_control, add_user, [list_to_binary(Name), list_to_binary(Password)]),
   ok;
 apply_command(#state {node = Node}, {drop_user, Name}) ->
-  debug("delete_user(~p)~n", [Name]),
-
   rpc_call(Node, rabbit_access_control, delete_user, [list_to_binary(Name)]),
   ok;
 
 % VHost Management
 apply_command(#state {node = Node}, {create_vhost, Name}) ->
-  debug("create_vhost(~p)~n", [Name]),
-
   rpc_call(Node, rabbit_access_control, add_vhost, [list_to_binary(Name)]),
   ok;
 apply_command(#state {node = Node}, {drop_vhost, Name}) ->
-  debug("delete_vhost(~p)~n", [Name]),
-
   rpc_call(Node, rabbit_access_control, delete_vhost, [list_to_binary(Name)]),
   ok;
 
 % Binding Management
 apply_command(#state {ch = ControlCh}, {create_binding, {X, Q, RoutingKey}}) ->
-  debug("create_binding(~p to ~p) (with routing key ~p)~n", [X, Q, RoutingKey]),
-
   lib_amqp:bind_queue(ControlCh, list_to_binary(X), list_to_binary(Q), list_to_binary(RoutingKey)),
   ok;
 apply_command(#state {ch = ControlCh}, {drop_binding, {X, Q, RoutingKey}}) ->
-  debug("unbind_queue(~p to ~p) with ~p~n", [X, Q, RoutingKey]),
-
   lib_amqp:unbind_queue(ControlCh, list_to_binary(X), list_to_binary(Q), list_to_binary(RoutingKey)),
   ok;
 
@@ -118,48 +98,46 @@ apply_command(#state {node = Node}, {revoke, Privilege, User}) ->
   
 % Queries
 apply_command(#state {node = Node}, {select, "exchanges", Fields, Modifiers}) ->
-  FieldList = validate_fields([name, type, durable, auto_delete, arguments], Fields),
-  Exchanges = rpc_call(Node, rabbit_exchange, info_all, [<<"/">>, FieldList]),
-  interpret_response(FieldList, Exchanges, Modifiers);
+  AllFieldList = [name, type, durable, auto_delete, arguments],
+  FieldList = validate_fields(AllFieldList, Fields),
+  Exchanges = rpc_call(Node, rabbit_exchange, info_all, [<<"/">>, AllFieldList]),
+  interpret_response(AllFieldList, FieldList, Exchanges, Modifiers);
 
 apply_command(#state {node = Node}, {select, "queues", Fields, Modifiers}) ->
-  FieldList = validate_fields(
-           [name, durable, auto_delete, arguments, pid, messages_ready,
-            messages_unacknowledged, messages_uncommitted, messages, acks_uncommitted,
-            consumers, transactions, memory],
-    	   Fields),
-  Queues = rpc_call(Node, rabbit_amqqueue, info_all, [<<"/">>, FieldList]),
-  interpret_response(FieldList, Queues, Modifiers);
+  AllFieldsList = [name, durable, auto_delete, arguments, pid, messages_ready,
+                   messages_unacknowledged, messages_uncommitted, messages, acks_uncommitted,
+                   consumers, transactions, memory],
+  FieldList = validate_fields(AllFieldsList, Fields),
+  Queues = rpc_call(Node, rabbit_amqqueue, info_all, [<<"/">>, AllFieldsList]),
+  interpret_response(AllFieldsList, FieldList, Queues, Modifiers);
 
 apply_command(#state {node = Node}, {select, "bindings", Fields, Modifiers}) ->
   AllFieldList = [exchange_name, queue_name, routing_key, args],
   FieldList = validate_fields(AllFieldList, Fields),
   Bindings = rpc_call(Node, rabbit_exchange, list_bindings, [<<"/">>]),
   ZippedBindings = [lists:zip(AllFieldList, tuple_to_list(X)) || X <- Bindings],
-  FilteredBindings = filter_rows(FieldList, ZippedBindings),
-  interpret_response(FieldList, FilteredBindings, Modifiers);
+  interpret_response(AllFieldList, FieldList, ZippedBindings, Modifiers);
 
 apply_command(#state {node = Node}, {select, "users", Fields, Modifiers}) ->
   AllFieldList = [name],
   FieldList = validate_fields(AllFieldList, Fields),
   Response = rpc_call(Node, rabbit_access_control, list_users, []),
   Users = [[{name, binary_to_list(User)}] || User <- Response],
-  interpret_response(FieldList, Users, Modifiers);
+  interpret_response(AllFieldList, FieldList, Users, Modifiers);
 
 apply_command(#state {node = Node}, {select, "vhosts", Fields, Modifiers}) ->
   AllFieldList = [name],
   FieldList = validate_fields(AllFieldList, Fields),
   Response = rpc_call(Node, rabbit_access_control, list_vhosts, []),
   VHosts = [[{name, binary_to_list(User)}] || User <- Response],
-  interpret_response(FieldList, VHosts, Modifiers);
+  interpret_response(AllFieldList, FieldList, VHosts, Modifiers);
 
 apply_command(#state {node = Node}, {select, "permissions", Fields, Modifiers}) ->
   AllFieldList = [username,configure_perm,write_perm,read_perm],
   FieldList = validate_fields(AllFieldList, Fields),
   Bindings = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [<<"/">>]),
   ZippedBindings = [lists:zip(AllFieldList, tuple_to_list(X)) || X <- Bindings],
-  FilteredBindings = filter_rows(FieldList, ZippedBindings),
-  interpret_response(FieldList, FilteredBindings, Modifiers);
+  interpret_response(AllFieldList, FieldList, ZippedBindings, Modifiers);
 
 apply_command(#state {}, {select, EntityName, _, _}) ->
   lists:flatten("Unknown entity " ++ EntityName ++ " specified to query");
@@ -178,14 +156,15 @@ rpc_call(Node, Mod, Fun, Args) ->
     rpc:call(Node, Mod, Fun, Args, ?RPC_TIMEOUT).
 
 % Formatting commands
-interpret_response(FieldList, Response, {Constraints, Ordering}) ->
+interpret_response(AvailFieldList, RequestedFieldList, Response, {Constraints, Ordering}) ->
   case Response of
     {bad_argument, Field} -> lists:flatten(io_lib:format("Invalid field \"~p\" requested", [Field]));
     _                     ->
         FormattedResponse = [[format_response(Cell) || Cell <- Detail] || Detail <- Response],
-        ConstrainedResponse = apply_constraints(FieldList, FormattedResponse, Constraints),
-        OrderedResponse = apply_ordering(FieldList, ConstrainedResponse, Ordering),
-        {FieldList, OrderedResponse}
+        ConstrainedResponse = apply_constraints(AvailFieldList, FormattedResponse, Constraints),
+        OrderedResponse = apply_ordering(AvailFieldList, ConstrainedResponse, Ordering),
+        FilteredResponse = filter_cols(AvailFieldList, RequestedFieldList, OrderedResponse),
+        {RequestedFieldList, FilteredResponse}
   end.
 
 format_response({_Name, {resource, _VHost, _Type, Value}}) ->
@@ -210,8 +189,12 @@ apply_constraints(FieldList, Rows, {or_sym, Left, Right}) ->
 
 apply_constraints(FieldList, Rows, {Constraint, Field, Value}) ->
   FieldPositions = lists:zip(FieldList, lists:seq(1, length(FieldList))),
-  {value, {Field, FieldPosition}} =  lists:keysearch(Field, 1, FieldPositions),
-  [Row || Row <- Rows, constraint_accepts(Constraint, lists:nth(FieldPosition, Row), Value)].
+  case lists:keysearch(Field, 1, FieldPositions) of
+    {value, {Field, FieldPosition}} -> 
+      [Row || Row <- Rows, constraint_accepts(Constraint, lists:nth(FieldPosition, Row), Value)];
+    false                           -> 
+      throw({invalid_constraint_field, Field})
+  end.
 
 constraint_accepts(eq, Value, Expected) ->
   bql_utils:convert_to_string(Value) =:= Expected;
@@ -262,10 +245,11 @@ order_items(FieldPosition, Row1, Row2, Direction) ->
     ascending  -> Row1Val < Row2Val
   end.
 
-filter_rows(RequiredFields, Rows) ->
+filter_cols(AllFields, RequiredFields, Rows) ->
+  FieldPositions = lists:zip(AllFields, lists:seq(1, length(AllFields))),
   Extract = fun(Field, Row) ->
-     {value, Cell} = lists:keysearch(Field, 1, Row),
-     Cell
+     {value, {_, Position}} = lists:keysearch(Field, 1, FieldPositions),
+     lists:nth(Position, Row)
   end,
   [[Extract(Field, Row) || Field <- RequiredFields] || Row <- Rows].
 
@@ -277,7 +261,7 @@ validate_fields(Available, Requested) ->
 			RequestedSet = sets:from_list(Requested),
 			Invalid = sets:subtract(RequestedSet, AvailableSet),
 			case sets:size(Invalid) of
-				0 -> RequestedSet;
+				0 -> sets:to_list(RequestedSet);
 				1 -> throw(lists:flatten(io_lib:format("The field ~p is invalid", sets:to_list(Invalid))));
 				_ -> throw(lists:flatten(io_lib:format("The fields ~p are invalid", [sets:to_list(Invalid)])))
 			end
