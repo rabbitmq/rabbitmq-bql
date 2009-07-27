@@ -236,8 +236,12 @@ apply_ordering(_FieldList, Rows, none) ->
   Rows;
 apply_ordering(FieldList, Rows, {order_by, Field, Direction}) ->
   FieldPositions = lists:zip(FieldList, lists:seq(1, length(FieldList))),
-  {value, {Field, FieldPosition}} =  lists:keysearch(Field, 1, FieldPositions),
-  lists:sort(fun(Row1, Row2) -> order_items(FieldPosition, Row1, Row2, Direction) end, Rows).
+  case lists:keysearch(Field, 1, FieldPositions) of
+    {value, {Field, FieldPosition}} ->
+      lists:sort(fun(Row1, Row2) -> order_items(FieldPosition, Row1, Row2, Direction) end, Rows);
+    false ->
+      throw(lists:flatten(io_lib:format("Invalid field ~s specified in ordering clause", [Field])))
+  end.
 
 order_items(FieldPosition, Row1, Row2, Direction) ->
   Row1Val = lists:nth(FieldPosition, Row1),

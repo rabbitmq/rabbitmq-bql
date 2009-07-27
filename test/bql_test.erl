@@ -27,6 +27,11 @@ constrain_with_invalid_field_test() ->
   ?assertEqual(["Invalid field invalid_field specified in constraint"], Response),
   ok.
 
+order_with_invalid_field_test() ->
+  Response = execute("select * from queues order by invalid_field;"),
+  ?assertEqual(["Invalid field invalid_field specified in ordering clause"], Response),
+  ok.
+
 create_non_durable_exchange_test() ->
   [ok] = execute("create exchange mynondurableexchange;"),
   [{_, Result}] = execute("select * from exchanges where name=mynondurableexchange and 'durable'=false;"),
