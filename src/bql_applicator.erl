@@ -104,19 +104,18 @@ apply_command(#state {node = Node}, {select, "exchanges", Fields, Modifiers}) ->
   interpret_response(AllFieldList, FieldList, Exchanges, Modifiers);
 
 apply_command(#state {node = Node}, {select, "queues", Fields, Modifiers}) ->
-  AllFieldsList = [name, durable, auto_delete, arguments, pid, messages_ready,
-                   messages_unacknowledged, messages_uncommitted, messages, acks_uncommitted,
-                   consumers, transactions, memory],
-  FieldList = validate_fields(AllFieldsList, Fields),
-  Queues = rpc_call(Node, rabbit_amqqueue, info_all, [<<"/">>, AllFieldsList]),
-  interpret_response(AllFieldsList, FieldList, Queues, Modifiers);
+  AllFieldList = [name, durable, auto_delete, arguments, pid, messages_ready,
+                  messages_unacknowledged, messages_uncommitted, messages, acks_uncommitted,
+                  consumers, transactions, memory],
+  FieldList = validate_fields(AllFieldList, Fields),
+  Queues = rpc_call(Node, rabbit_amqqueue, info_all, [<<"/">>, AllFieldList]),
+  interpret_response(AllFieldList, FieldList, Queues, Modifiers);
 
 apply_command(#state {node = Node}, {select, "bindings", Fields, Modifiers}) ->
   AllFieldList = [exchange_name, queue_name, routing_key, args],
   FieldList = validate_fields(AllFieldList, Fields),
   Bindings = rpc_call(Node, rabbit_exchange, list_bindings, [<<"/">>]),
-  ZippedBindings = [lists:zip(AllFieldList, tuple_to_list(X)) || X <- Bindings],
-  interpret_response(AllFieldList, FieldList, ZippedBindings, Modifiers);
+  interpret_response(AllFieldList, FieldList, Bindings, Modifiers);
 
 apply_command(#state {node = Node}, {select, "users", Fields, Modifiers}) ->
   AllFieldList = [name],
@@ -135,9 +134,8 @@ apply_command(#state {node = Node}, {select, "vhosts", Fields, Modifiers}) ->
 apply_command(#state {node = Node}, {select, "permissions", Fields, Modifiers}) ->
   AllFieldList = [username,configure_perm,write_perm,read_perm],
   FieldList = validate_fields(AllFieldList, Fields),
-  Bindings = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [<<"/">>]),
-  ZippedBindings = [lists:zip(AllFieldList, tuple_to_list(X)) || X <- Bindings],
-  interpret_response(AllFieldList, FieldList, ZippedBindings, Modifiers);
+  Permissions = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [<<"/">>]),
+  interpret_response(AllFieldList, FieldList, Permissions, Modifiers);
 
 apply_command(#state {}, {select, EntityName, _, _}) ->
   lists:flatten("Unknown entity " ++ EntityName ++ " specified to query");
@@ -156,23 +154,27 @@ rpc_call(Node, Mod, Fun, Args) ->
     rpc:call(Node, Mod, Fun, Args, ?RPC_TIMEOUT).
 
 % Formatting commands
-interpret_response(AvailFieldList, RequestedFieldList, Response, {Constraints, Ordering}) ->
-  case Response of
-    {bad_argument, Field} -> lists:flatten(io_lib:format("Invalid field \"~p\" requested", [Field]));
-    _                     ->
-        FormattedResponse = [[format_response(Cell) || Cell <- Detail] || Detail <- Response],
-        ConstrainedResponse = apply_constraints(AvailFieldList, FormattedResponse, Constraints),
-        OrderedResponse = apply_ordering(AvailFieldList, ConstrainedResponse, Ordering),
-        FilteredResponse = filter_cols(AvailFieldList, RequestedFieldList, OrderedResponse),
-        {RequestedFieldList, FilteredResponse}
-  end.
+interpret_response(_, _, {bad_argument, Field}, _) ->
+  lists:flatten(io_lib:format("Invalid field \"~p\" requested", [Field]));
+interpret_response(_, _, [], _) ->
+  [];
 
-format_response({_Name, {resource, _VHost, _Type, Value}}) ->
-  binary_to_list(Value);
+interpret_response(AvailFieldList, RequestedFieldList, [RHead|_] = Response, Modifiers) when is_tuple(RHead)->
+  interpret_response(AvailFieldList, RequestedFieldList, [tuple_to_list(X) || X <- Response], Modifiers);
+
+interpret_response(AvailFieldList, RequestedFieldList, Response, {Constraints, Ordering}) ->
+  FormattedResponse = [[format_response(Cell) || Cell <- Detail] || Detail <- Response],
+  ConstrainedResponse = apply_constraints(AvailFieldList, FormattedResponse, Constraints),
+  OrderedResponse = apply_ordering(AvailFieldList, ConstrainedResponse, Ordering),
+  FilteredResponse = filter_cols(AvailFieldList, RequestedFieldList, OrderedResponse),
+  {RequestedFieldList, FilteredResponse}.
+
 format_response({_Name, Value}) ->
-  Value;
+  format_response(Value);
+format_response({resource, _VHost, _Type, Value}) ->
+  binary_to_list(Value);
 format_response(Value) ->
-  lists:flatten(io_lib:format("Unparseable: ~p", [Value])).
+  Value.
 
 % Constraints
 apply_constraints(_FieldList, Rows, none) ->
