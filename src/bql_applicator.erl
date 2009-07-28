@@ -138,12 +138,21 @@ apply_command(#state {node = Node}, {select, "permissions", Fields, Modifiers}) 
   interpret_response(AllFieldList, FieldList, Permissions, Modifiers);
 
 % Sending Messages
-apply_command(#state { ch = Ch }, {send_message, Exchange, RoutingKey, Msg} = Cmd) ->
+apply_command(#state { ch = Ch }, {post_message, Exchange, RoutingKey, Msg}) ->
   Properties = #'P_basic'{ delivery_mode = 1 },
   case lib_amqp:publish(Ch, list_to_binary(Exchange), list_to_binary(RoutingKey), 
                         list_to_binary(Msg), Properties) of
     ok  -> ok;
     Res -> io_lib:format("~p", [Res])
+  end;
+
+% Retreving Messages
+apply_command(#state { ch = Ch }, {retrieve_message, Queue}) ->
+  case lib_amqp:get(Ch, list_to_binary(Queue)) of
+    'basic.get_empty' ->
+      empty;
+    {content, ClassId, Props, PropertiesBin, [Payload]} ->
+      Payload
   end;
 
 apply_command(#state {}, {select, EntityName, _, _}) ->

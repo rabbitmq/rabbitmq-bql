@@ -66,13 +66,14 @@ desc        :   {token,{desc,TokenLine,list_to_atom(TokenChars)}}.
 grant       :   {token,{grant,TokenLine,list_to_atom(TokenChars)}}.
 revoke      :   {token,{revoke,TokenLine,list_to_atom(TokenChars)}}.
 purge       :   {token,{purge,TokenLine,list_to_atom(TokenChars)}}.
-send        :   {token,{send,TokenLine,list_to_atom(TokenChars)}}.
+post        :   {token,{post,TokenLine,list_to_atom(TokenChars)}}.
 with        :   {token,{with,TokenLine,list_to_atom(TokenChars)}}.
+get         :   {token,{get,TokenLine,list_to_atom(TokenChars)}}.
 {Wild}      :   {token,{wildcard,TokenLine,list_to_atom(TokenChars)}}.
 {Comma}     :   {token,{comma,TokenLine,list_to_atom(TokenChars)}}.
 {Comp}      :   {token,{comparator,TokenLine,list_to_atom(TokenChars)}}.
 like        :   {token,{comparator,TokenLine,list_to_atom(TokenChars)}}.
-'{W}+'      :   {token,{string,TokenLine,strip(TokenChars, TokenLen)}}.
+'{W}*'      :   {token,{string,TokenLine,strip(TokenChars, TokenLen)}}.
 {C}+        :   {token,{string,TokenLine,TokenChars}}.
 {Semi}      :   {token,{semi,TokenLine,list_to_atom(TokenChars)}}.
 {WS}+       :   skip_token.
