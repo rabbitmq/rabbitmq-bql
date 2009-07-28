@@ -45,10 +45,10 @@ stop(_State) ->
   stop().
 
 start_link() ->
-  gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
+  gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 send_command(Username, Password, Command) ->
-  gen_server:call({global, ?MODULE}, {execute, Username, Password, Command}).
+  gen_server:call(?MODULE, {execute, Username, Password, Command}).
 
 %---------------------------
 % Gen Server Implementation
