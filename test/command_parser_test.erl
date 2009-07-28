@@ -187,3 +187,11 @@ revoke_permission_test() ->
 purge_queue_test() ->
     {ok, Commands} = commands:parse("purge queue myqueue;"),
     ?assert([{purge_queue, "myqueue"}] =:= Commands).
+
+send_message_test() ->
+    {ok, Commands} = commands:parse("send 'Hello World' to myexchange;"),
+    ?assert([{send_message, "myexchange", "", "Hello World"}] =:= Commands).
+
+send_message_with_routing_key_test() ->
+    {ok, Commands} = commands:parse("send 'Hello World' to myexchange with routing_key rk;"),
+    ?assert([{send_message, "myexchange", "rk", "Hello World"}] =:= Commands).

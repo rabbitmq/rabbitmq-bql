@@ -98,6 +98,14 @@ select_binding_with_where_clause_not_in_result_test() ->
   ?assertEqual([["mynondurablequeue"]], Result),
   ok.
 
+send_message_test() ->
+  [ok] = execute("create exchange mynondurableexchange;"),
+  [ok] = execute("send 'Hello World' to mynondurableexchange;").  
+
+send_message_with_routing_key_test() ->
+  [ok] = execute("create exchange mynondurableexchange;"),
+  [ok] = execute("send 'Hello World' to mynondurableexchange with routing_key rk;").
+
 execute(Command) ->
   {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, Command),
   Result.

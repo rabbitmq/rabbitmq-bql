@@ -137,6 +137,15 @@ apply_command(#state {node = Node}, {select, "permissions", Fields, Modifiers}) 
   Permissions = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [<<"/">>]),
   interpret_response(AllFieldList, FieldList, Permissions, Modifiers);
 
+% Sending Messages
+apply_command(#state { ch = Ch }, {send_message, Exchange, RoutingKey, Msg} = Cmd) ->
+  Properties = #'P_basic'{ delivery_mode = 1 },
+  case lib_amqp:publish(Ch, list_to_binary(Exchange), list_to_binary(RoutingKey), 
+                        list_to_binary(Msg), Properties) of
+    ok  -> ok;
+    Res -> io_lib:format("~p", [Res])
+  end;
+
 apply_command(#state {}, {select, EntityName, _, _}) ->
   lists:flatten("Unknown entity " ++ EntityName ++ " specified to query");
 

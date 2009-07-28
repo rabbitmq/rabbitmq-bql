@@ -27,7 +27,7 @@ statements statement expression route_desc field_desc field_list modifiers where
 
 Terminals
 create drop durable queue exchange exchange_type route from to routing_key is when_sym string select wildcard
-comma where comparator union order by asc desc user identified vhost grant revoke on purge semi.
+comma where comparator union order by asc desc user identified vhost grant revoke on purge send with semi.
 
 Rootsymbol statements.
 
@@ -55,6 +55,8 @@ expression -> select field_desc from string modifiers         : {select, unwrap(
 expression -> grant string on string to string                : {grant, list_to_atom(unwrap('$2')), unwrap('$4'), unwrap('$6')}.
 expression -> revoke string from string                       : {revoke, list_to_atom(unwrap('$2')), unwrap('$4')}.
 expression -> purge queue string                              : {purge_queue, unwrap('$3')}.
+expression -> send string to string                           : {send_message, unwrap('$4'), "", unwrap('$2')}.
+expression -> send string to string with routing_key string   : {send_message, unwrap('$4'), unwrap('$7'), unwrap('$2')}.
 
 route_desc -> route from string to string                                 : {unwrap('$3'), unwrap('$5'), ""}.
 route_desc -> route from string to string when_sym routing_key is string  : {unwrap('$3'), unwrap('$5'), unwrap('$9')}.
