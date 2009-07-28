@@ -37,5 +37,11 @@ init([]) ->
             permanent,
             10000,
             worker,
-            [bql_server]}
+            [bql_server]},
+           {bql_amqp_rpc_server,
+            {bql_amqp_rpc_server, start_link, []},
+            permanent,
+            10000,
+            worker,
+            [bql_amqp_rpc_server]}
           ]}}.
