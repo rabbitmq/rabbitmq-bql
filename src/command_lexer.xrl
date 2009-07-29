@@ -45,6 +45,7 @@ exchange    :   {token,{exchange,TokenLine,list_to_atom(TokenChars)}}.
 direct      :   {token,{exchange_type,TokenLine,list_to_atom(TokenChars)}}.
 headers     :   {token,{exchange_type,TokenLine,list_to_atom(TokenChars)}}.
 fanout      :   {token,{exchange_type,TokenLine,list_to_atom(TokenChars)}}.
+topic       :   {token,{exchange_type,TokenLine,list_to_atom(TokenChars)}}.
 route       :   {token,{route,TokenLine,list_to_atom(TokenChars)}}.
 from        :   {token,{from,TokenLine,list_to_atom(TokenChars)}}.
 to          :   {token,{to,TokenLine,list_to_atom(TokenChars)}}.

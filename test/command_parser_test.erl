@@ -68,6 +68,10 @@ create_fanout_exchange_test() ->
     {ok, Commands} = commands:parse("create fanout exchange 'myex';"),
     ?assert([{create_exchange,"myex",fanout,false}] =:= Commands).
 
+create_topic_exchange_test() ->
+    {ok, Commands} = commands:parse("create topic exchange 'myex';"),
+    ?assert([{create_exchange,"myex",topic,false}] =:= Commands).
+
 create_durable_default_exchange_test() ->
     {ok, Commands} = commands:parse("create durable exchange 'myex';"),
     ?assert([{create_exchange,"myex",direct,true}] =:= Commands).
