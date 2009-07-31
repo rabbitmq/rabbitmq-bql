@@ -28,6 +28,10 @@
 
 -define(debugCommands(C), ?debugFmt("Got commands: ~p~n", [C])). 
 
+create_queue_with_nosemi_test() ->
+    {ok, Commands} = commands:parse("create queue blah"),
+    ?assert([{create_queue,"blah",false}] =:= Commands).
+
 create_nondurable_queue_test() ->
     {ok, Commands} = commands:parse("create queue blah;"),
     ?assert([{create_queue,"blah",false}] =:= Commands).
@@ -146,19 +150,31 @@ select_exchange_name_types_with_ored_filter_test() ->
 
 select_exchange_name_order_by_name_test() ->
     {ok, Commands} = commands:parse("select name,type from exchanges order by name;"),
-    ?assert([{select, "exchanges", [name, type], {none, {order_by, name, ascending}}}] =:= Commands).
+    ?assertEqual([{select, "exchanges", [name, type], {none, {order_by, [{name, ascending}]}}}], Commands).
 
 select_exchange_name_order_by_name_explicit_descending_test() ->
     {ok, Commands} = commands:parse("select name,type from exchanges order by name desc;"),
-    ?assert([{select, "exchanges", [name, type], {none, {order_by, name, descending}}}] =:= Commands).
+    ?assertEqual([{select, "exchanges", [name, type], {none, {order_by, [{name, descending}]}}}], Commands).
 
 select_exchange_name_order_by_name_explicit_ascending_test() ->
     {ok, Commands} = commands:parse("select name,type from exchanges order by name asc;"),
-    ?assert([{select, "exchanges", [name, type], {none, {order_by, name, ascending}}}] =:= Commands).
+    ?assert([{select, "exchanges", [name, type], {none, {order_by, [{name, ascending}]}}}] =:= Commands).
+
+select_exchange_name_order_by_name_and_type_test() ->
+    {ok, Commands} = commands:parse("select name,type from exchanges order by name, type;"),
+    ?assert([{select, "exchanges", [name, type], {none, {order_by, [{name, ascending}, {type, ascending}]}}}] =:= Commands).
+
+select_exchange_name_order_by_name_and_type_explicit_descending_ascending_test() ->
+    {ok, Commands} = commands:parse("select name,type from exchanges order by name desc, type asc;"),
+    ?assert([{select, "exchanges", [name, type], {none, {order_by, [{name, descending}, {type, ascending}]}}}] =:= Commands).
+
+select_exchange_name_order_by_name_and_type_explicit_ascending_test() ->
+    {ok, Commands} = commands:parse("select name,type from exchanges order by name asc, type asc;"),
+    ?assert([{select, "exchanges", [name, type], {none, {order_by, [{name, ascending}, {type, ascending}]}}}] =:= Commands).
 
 select_exchange_name_order_by_name_with_constraints_test() ->
     {ok, Commands} = commands:parse("select name,type from exchanges where name='amq.topic' or 'durable'!=true order by name;"),
-    ?assert([{select, "exchanges", [name, type], {{or_sym, {eq, name, "amq.topic"}, {neq, durable, "true"}}, {order_by, name, ascending}}}] =:= Commands).
+    ?assert([{select, "exchanges", [name, type], {{or_sym, {eq, name, "amq.topic"}, {neq, durable, "true"}}, {order_by, [{name, ascending}]}}}] =:= Commands).
 
 create_user_test() ->
     {ok, Commands} = commands:parse("create user user1 identified by mypassword;"),

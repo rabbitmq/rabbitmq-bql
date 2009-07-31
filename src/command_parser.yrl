@@ -23,7 +23,8 @@
 %%   Contributor(s): ___________________________
 %%
 Nonterminals 
-statements statement expression route_desc field_desc field_list modifiers where_clause orderby_clause predicate predicates.
+statements expression route_desc field_desc field_list modifiers where_clause orderby_clause predicate predicates
+orderby_predicates orderby_predicate.
 
 Terminals
 create drop durable queue exchange exchange_type route from to routing_key is when_sym string select wildcard
@@ -31,10 +32,9 @@ comma where comparator union order by asc desc user identified vhost grant revok
 
 Rootsymbol statements.
 
-statements -> statement            : ['$1'].
-statements -> statement statements : ['$1'] ++ '$2'.
-
-statement -> expression semi       : '$1'.
+statements -> expression                 : ['$1'].
+statements -> expression semi            : ['$1'].
+statements -> expression semi statements : ['$1'] ++ '$3'.
 
 expression -> create vhost string                             : {create_vhost, unwrap('$3')}.
 expression -> drop vhost string                               : {drop_vhost, unwrap('$3')}.
@@ -78,9 +78,14 @@ predicates -> predicate union predicate                       : {unwrap('$2'), '
 
 predicate -> string comparator string                         : {comp_to_atom(unwrap('$2')), list_to_atom(unwrap('$1')), unwrap('$3')}.
 
-orderby_clause -> order by string                             : {order_by, list_to_atom(unwrap('$3')), ascending}.
-orderby_clause -> order by string asc                         : {order_by, list_to_atom(unwrap('$3')), ascending}.
-orderby_clause -> order by string desc                        : {order_by, list_to_atom(unwrap('$3')), descending}.
+orderby_clause -> order by orderby_predicates                    : {order_by, '$3'}.
+
+orderby_predicates -> orderby_predicate                          : ['$1'].
+orderby_predicates -> orderby_predicate comma orderby_predicates : ['$1'] ++ '$3'.
+
+orderby_predicate -> string                                   : {list_to_atom(unwrap('$1')), ascending}.
+orderby_predicate -> string asc                               : {list_to_atom(unwrap('$1')), ascending}.
+orderby_predicate -> string desc                              : {list_to_atom(unwrap('$1')), descending}.
 
 Erlang code.
 

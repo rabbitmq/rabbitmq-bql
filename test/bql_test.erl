@@ -32,6 +32,18 @@ order_with_invalid_field_test() ->
   ?assertEqual(["Invalid field invalid_field specified in ordering clause"], Response),
   ok.
 
+order_with_single_field_test() ->
+  [ok,ok,ok] = execute("create queue myqueue3; create queue myqueue2; create queue myqueue1"),
+  [{_, Result}] = execute("select name from queues where name like 'myqueue%' order by name;"),
+  ?assertEqual([["myqueue1"], ["myqueue2"], ["myqueue3"]], Result),
+  ok.
+
+order_with_multiple_field_test() ->
+  [ok,ok,ok] = execute("create topic exchange myx3; create topic exchange myx2; create headers exchange myx1"),
+  [{_, Result}] = execute("select name from exchanges where name like 'myx%' order by type desc, name;"),
+  ?assertEqual([["myx2"], ["myx3"], ["myx1"]], Result),
+  ok.
+
 create_non_durable_exchange_test() ->
   [ok] = execute("create exchange mynondurableexchange;"),
   [{_, Result}] = execute("select * from exchanges where name=mynondurableexchange and 'durable'=false;"),

@@ -151,7 +151,7 @@ apply_command(#state { ch = Ch }, {retrieve_message, Queue}) ->
   case lib_amqp:get(Ch, list_to_binary(Queue)) of
     'basic.get_empty' ->
       empty;
-    {content, ClassId, Props, PropertiesBin, [Payload]} ->
+    {content, _ClassId, _Props, _PropertiesBin, [Payload]} ->
       Payload
   end;
 
@@ -252,21 +252,31 @@ constraint_accepts(like, Value, Expected) ->
 
 apply_ordering(_FieldList, Rows, none) ->
   Rows;
-apply_ordering(FieldList, Rows, {order_by, Field, Direction}) ->
+apply_ordering(FieldList, Rows, {order_by, Clauses}) ->
   FieldPositions = lists:zip(FieldList, lists:seq(1, length(FieldList))),
+  OrderingFieldPositions = [{name_to_position(Name, FieldPositions), Direction} || {Name, Direction} <- Clauses],
+  lists:sort(fun(Row1, Row2) -> order_items(Row1, Row2, OrderingFieldPositions) end, Rows).
+
+name_to_position(Field, FieldPositions) ->
   case lists:keysearch(Field, 1, FieldPositions) of
     {value, {Field, FieldPosition}} ->
-      lists:sort(fun(Row1, Row2) -> order_items(FieldPosition, Row1, Row2, Direction) end, Rows);
+      FieldPosition;
     false ->
       throw(lists:flatten(io_lib:format("Invalid field ~s specified in ordering clause", [Field])))
   end.
 
-order_items(FieldPosition, Row1, Row2, Direction) ->
+order_items(_, _, []) ->
+  true;
+order_items(Row1, Row2, [{FieldPosition, Direction} | RestOrdering]) ->
   Row1Val = lists:nth(FieldPosition, Row1),
   Row2Val = lists:nth(FieldPosition, Row2),
-  case Direction of
-    descending -> Row1Val > Row2Val;
-    ascending  -> Row1Val < Row2Val
+  case Row1Val == Row2Val of
+    true -> order_items(Row1, Row2, RestOrdering);
+    false ->
+      case Direction of
+        descending -> Row1Val > Row2Val;
+        ascending  -> Row1Val < Row2Val
+      end
   end.
 
 filter_cols(AllFields, RequiredFields, Rows) ->
