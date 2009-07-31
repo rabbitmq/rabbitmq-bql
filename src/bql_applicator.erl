@@ -137,6 +137,12 @@ apply_command(#state {node = Node}, {select, "permissions", Fields, Modifiers}) 
   Permissions = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [<<"/">>]),
   interpret_response(AllFieldList, FieldList, Permissions, Modifiers);
 
+apply_command(#state {node = Node}, {select, "connections", Fields, Modifiers}) ->
+  AllFieldList = [user, peer_address, peer_port],
+  FieldList = validate_fields(AllFieldList, Fields),
+  Connections = rpc_call(Node, rabbit_networking, connection_info_all, [AllFieldList]),
+  interpret_response(AllFieldList, FieldList, Connections, Modifiers);
+
 % Sending Messages
 apply_command(#state { ch = Ch }, {post_message, Exchange, RoutingKey, Msg}) ->
   Properties = #'P_basic'{ delivery_mode = 1 },
@@ -295,7 +301,7 @@ validate_fields(Available, Requested) ->
 			RequestedSet = sets:from_list(Requested),
 			Invalid = sets:subtract(RequestedSet, AvailableSet),
 			case sets:size(Invalid) of
-				0 -> sets:to_list(RequestedSet);
+				0 -> Requested;
 				1 -> throw(lists:flatten(io_lib:format("The field ~p is invalid", sets:to_list(Invalid))));
 				_ -> throw(lists:flatten(io_lib:format("The fields ~p are invalid", [sets:to_list(Invalid)])))
 			end

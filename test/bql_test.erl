@@ -110,6 +110,10 @@ select_binding_with_where_clause_not_in_result_test() ->
   ?assertEqual([["mynondurablequeue"]], Result),
   ok.
 
+select_connections_test() ->
+  [{_, Result}] = execute("select * from connections"),
+  ?assert(length(Result) > 0).
+
 post_message_test() ->
   [ok] = execute("create exchange mynondurableexchange;"),
   [ok] = execute("post 'Hello World' to mynondurableexchange;").  
