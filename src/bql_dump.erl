@@ -71,7 +71,7 @@ start() ->
                              end),
 
     io:format("~s~n", [string:join([Exchanges, Queues, Bindings], "\n")]),
-    halt().
+    init:stop().
 
 stop() ->
     ok.
