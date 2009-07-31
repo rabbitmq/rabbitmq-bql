@@ -28,11 +28,12 @@
 
 -export([start/0, stop/0]).
 
--define(ReservedExchanges, ["amq.match", "amq.headers", "amq.topic", "amq.direct", "amq.fanout", "", "amq.rabbitmq.log"]).
--define(ReservedQueues, []).
+-define(ReservedExchanges, ["amq.match", "amq.headers", "amq.topic", "amq.direct", "amq.fanout", 
+                            "", "amq.rabbitmq.log", "bql.query"]).
+-define(ReservedQueues, ["bql.query"]).
 
 start() ->
-    Exchanges = execute_block("select * from exchanges;",
+    Exchanges = execute_block("select * from exchanges order by name;",
                               fun(Ex) ->
                                 {value, {_, ExchangeType}} = lists:keysearch(type, 1, Ex),
                                 Durable = durable_str(Ex),
@@ -43,7 +44,7 @@ start() ->
                                   false -> io_lib:format("create ~s~p exchange '~s';", [Durable, ExchangeType, Name])
                                 end
                               end),
-    Queues = execute_block("select * from queues;",
+    Queues = execute_block("select * from queues order by name;",
                            fun(Q) ->
                              Durable = durable_str(Q),
                              {value, {_, Name}} = lists:keysearch(name, 1, Q),
@@ -53,7 +54,7 @@ start() ->
                                false -> io_lib:format("create ~squeue '~s';", [Durable, Name])
                              end
                            end),
-    Bindings = execute_block("select * from bindings;",
+    Bindings = execute_block("select * from bindings order by exchange_name, queue_name, 'routing_key';",
                              fun(B) ->
                                {value, {_, X}} = lists:keysearch(exchange_name, 1, B),
                                {value, {_, Q}} = lists:keysearch(queue_name, 1, B),
