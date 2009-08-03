@@ -138,7 +138,8 @@ apply_command(#state {node = Node}, {select, "permissions", Fields, Modifiers}) 
   interpret_response(AllFieldList, FieldList, Permissions, Modifiers);
 
 apply_command(#state {node = Node}, {select, "connections", Fields, Modifiers}) ->
-  AllFieldList = [user, peer_address, peer_port],
+  AllFieldList = [pid, address, port, peer_address, peer_port, recv_oct, recv_cnt, send_oct, send_cnt,
+                  send_pend, state, channels, user, vhost, timeout, frame_max],
   FieldList = validate_fields(AllFieldList, Fields),
   Connections = rpc_call(Node, rabbit_networking, connection_info_all, [AllFieldList]),
   interpret_response(AllFieldList, FieldList, Connections, Modifiers);
