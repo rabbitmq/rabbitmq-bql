@@ -1,8 +1,8 @@
-PACKAGE=mod_bql
+PACKAGE=rabbitmq-bql
 DEPS=rabbitmq-server rabbitmq-erlang-client erlang-rfc4627
 GENERATED_SOURCES=command_lexer command_parser
 EXTRA_PACKAGE_DIRS=scripts
-TEST_APPS=mod_bql
+TEST_APPS=amqp_client rabbitmq_bql
 TEST_COMMANDS=command_parser_test:test() bql_test:test() amq_interface_test:test()
 START_RABBIT_IN_TESTS=true
 

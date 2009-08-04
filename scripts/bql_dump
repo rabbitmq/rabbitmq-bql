@@ -34,6 +34,6 @@ exec erl \
     -pa "`dirname $0`/../ebin" \
     -noshell \
     -hidden \
-    -sname amqpbdl$$ \
+    -sname amqpbql$$ \
     -s bql_dump \
     -extra "$@"

@@ -22,15 +22,18 @@
 %%
 %%   Contributor(s): ___________________________
 %%
--module(mod_bql).
+-module(rabbitmq_bql).
 
 -export([start/0, stop/0, start/2, stop/1]).
 
-start() -> mod_bql_sup:start_link(), ok.
-stop() -> ok.
+start() -> 
+    rabbitmq_bql_sup:start_link(), ok.
+
+stop() -> 
+    ok.
 
 start(normal, []) ->
-    mod_bql_sup:start_link().
+    rabbitmq_bql_sup:start_link().
 
 stop(_State) ->
     ok.

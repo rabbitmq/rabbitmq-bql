@@ -22,7 +22,7 @@
 %%
 %%   Contributor(s): ___________________________
 %%
--module(mod_bql_sup).
+-module(rabbitmq_bql_sup).
 -behaviour(supervisor).
 
 -export([start_link/0, init/1]).
