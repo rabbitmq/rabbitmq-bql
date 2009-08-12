@@ -127,8 +127,13 @@ retrieve_message_test() ->
   [ok] = execute("purge queue mydeliveryqueue;"),
   [ok] = execute("create route from mydeliveryexchange to mydeliveryqueue;"),
   [ok] = execute("post 'Some Message' to mydeliveryexchange;"),
-  [Response] = execute("get from mydeliveryqueue;"),
-  ?assertEqual(<<"Some Message">>, Response).
+  [Response1] = execute("get from mydeliveryqueue;"),
+  ?assertEqual(<<"Some Message">>, Response1),
+  [ok] = execute("purge queue mydeliveryqueue;"),
+  [Response2] = execute("get from mydeliveryqueue;"),
+  ?assertEqual(empty, Response2),
+  [Response3] = execute("get from bogusqueue;"),
+  ?assertEqual(unknown_queue, Response3).
 
 execute(Command) ->
   {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, Command),

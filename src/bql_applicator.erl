@@ -42,7 +42,11 @@ apply_commands(Commands) ->
   % Create a connection to the Rabbit node too
   Node = rabbit_misc:localnode(rabbit),
 
-  {ok, [catch apply_command(#state {ch = ControlCh, node = Node}, Command) || Command <- Commands]}.
+  try
+      {ok, [catch apply_command(#state {ch = ControlCh, node = Node}, Command) || Command <- Commands]}
+  after
+      lib_amqp:close_connection(Connection)
+  end.
 
 % Queue Management
 apply_command(#state {ch = ControlCh}, {create_queue, Name, Durable}) ->
