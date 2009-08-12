@@ -120,13 +120,11 @@ handle_info(#'basic.cancel_ok'{}, State) ->
     {stop, normal, State};
 
 handle_info({#'basic.deliver'{},
-            {content, ClassId, Props, PropertiesBin, [Payload] }},
+            #amqp_msg{props = #'P_basic'{correlation_id = <<Id:64>>},
+                      payload = Payload }},
             State = #rpc_client_state{continuations = Conts}) ->
-    #'P_basic'{correlation_id = CorrelationId}
-               = decode_properties(ClassId, Props, PropertiesBin),
-    <<Id:64>> = CorrelationId,
     From = dict:fetch(Id, Conts),
-    gen_server:reply(From, Payload),
+    gen_server:reply(From, binary_to_list(Payload)),
     {noreply, State#rpc_client_state{continuations = dict:erase(Id, Conts) }}.
 
 code_change(_OldVsn, State, _Extra) ->
