@@ -155,10 +155,16 @@ apply_command(#state { ch = Ch }, {post_message, Exchange, RoutingKey, Msg}) ->
   end;
 
 % Retreving Messages
-apply_command(#state { ch = Ch }, {retrieve_message, Queue}) ->
-  case lib_amqp:get(Ch, list_to_binary(Queue)) of
-    'basic.get_empty'            -> empty;
-    #amqp_msg{payload = Payload} -> Payload
+apply_command(#state { ch = Ch, node = Node }, {retrieve_message, Queue}) ->
+  case rpc_call(Node, rabbit_amqqueue, lookup,
+                         [{resource, <<"/">>, queue, list_to_binary(Queue)}]) of
+    {error, not_found} ->
+      unknown_queue;
+    {ok,_} ->
+      case lib_amqp:get(Ch, list_to_binary(Queue)) of
+       'basic.get_empty'            -> empty;
+       #amqp_msg{payload = Payload} -> Payload
+      end
   end;
 
 apply_command(#state {}, {select, EntityName, _, _}) ->
