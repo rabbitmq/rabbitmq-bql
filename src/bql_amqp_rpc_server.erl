@@ -30,6 +30,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -include("rabbit.hrl").
+-include("amqp_client.hrl").
 -include("rabbit_framing.hrl").
 
 -record(state, { channel }).
@@ -58,10 +59,9 @@ handle_cast(_,State) -> {reply,unhandled_cast,State}.
 handle_info(#'basic.consume_ok'{}, State) ->
     {noreply, State};
 handle_info({#'basic.deliver' { 'delivery_tag' = DeliveryTag },
-             {content, ClassId, Props, PropertiesBin, [Payload] }},
+             #amqp_msg{props = Props, payload = Payload }},
             State = #state { channel = Ch }) ->
-    #'P_basic'{correlation_id = CorrelationId,
-               reply_to = Q} = decode_properties(ClassId, Props, PropertiesBin),
+    #'P_basic'{correlation_id = CorrelationId, reply_to = Q} = Props,
     try
       ResponseObj = case rfc4627:decode(Payload) of
         {ok, RequestObj, _Rest} ->
@@ -101,12 +101,6 @@ terminate(_Reason, #state { channel = Ch }) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
-decode_properties(ClassId, Properties, PropertiesBin) ->
-  case Properties of
-    none -> rabbit_framing:decode_properties(ClassId, PropertiesBin);
-    _    -> Properties
-  end.
 
 format_result(Result) ->
   [format_result_entry(E) || E <- Result].

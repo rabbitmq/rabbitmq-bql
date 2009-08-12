@@ -26,6 +26,7 @@
 
 -export([apply_commands/1]).
 
+-include("amqp_client.hrl").
 -include("rabbit.hrl").
 -include("rabbit_framing.hrl").
 
@@ -156,10 +157,8 @@ apply_command(#state { ch = Ch }, {post_message, Exchange, RoutingKey, Msg}) ->
 % Retreving Messages
 apply_command(#state { ch = Ch }, {retrieve_message, Queue}) ->
   case lib_amqp:get(Ch, list_to_binary(Queue)) of
-    'basic.get_empty' ->
-      empty;
-    {content, _ClassId, _Props, _PropertiesBin, [Payload]} ->
-      Payload
+    'basic.get_empty'            -> empty;
+    #amqp_msg{payload = Payload} -> Payload
   end;
 
 apply_command(#state {}, {select, EntityName, _, _}) ->
