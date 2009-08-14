@@ -27,7 +27,7 @@
 Definitions.
 
 C     = [0-9A-Za-z\.\-\_]
-W     = [0-9A-Za-z\s\.\-\_%\/*#]
+W     = [0-9A-Za-z\s\.\-\_%\/*#@]
 Semi  = [;]
 Wild  = [*]
 Comma = [,]
