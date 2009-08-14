@@ -70,6 +70,7 @@ purge       :   {token,{purge,TokenLine,list_to_atom(TokenChars)}}.
 post        :   {token,{post,TokenLine,list_to_atom(TokenChars)}}.
 with        :   {token,{with,TokenLine,list_to_atom(TokenChars)}}.
 get         :   {token,{get,TokenLine,list_to_atom(TokenChars)}}.
+drain       :   {token,{drain,TokenLine,list_to_atom(TokenChars)}}.
 {Wild}      :   {token,{wildcard,TokenLine,list_to_atom(TokenChars)}}.
 {Comma}     :   {token,{comma,TokenLine,list_to_atom(TokenChars)}}.
 {Comp}      :   {token,{comparator,TokenLine,list_to_atom(TokenChars)}}.

@@ -223,3 +223,8 @@ send_message_with_routing_key_test() ->
 get_message_test() ->
     {ok, Commands} = commands:parse("get from myqueue;"),
     ?assert([{retrieve_message, "myqueue"}] =:= Commands).
+
+darin_queue_test() ->
+    {ok, Commands} = commands:parse("drain myqueue;"),
+    ?assert([{drain_queue, "myqueue"}] =:= Commands).
+

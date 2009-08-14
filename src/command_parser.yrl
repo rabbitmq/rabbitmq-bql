@@ -28,7 +28,8 @@ orderby_predicates orderby_predicate.
 
 Terminals
 create drop durable queue exchange exchange_type route from to routing_key is when_sym string select wildcard
-comma where comparator union order by asc desc user identified vhost grant revoke on purge post with get semi.
+comma where comparator union order by asc desc user identified vhost grant revoke on purge post with get semi
+drain.
 
 Rootsymbol statements.
 
@@ -58,6 +59,7 @@ expression -> purge queue string                              : {purge_queue, un
 expression -> post string to string                           : {post_message, unwrap('$4'), "", unwrap('$2')}.
 expression -> post string to string with routing_key string   : {post_message, unwrap('$4'), unwrap('$7'), unwrap('$2')}.
 expression -> get from string                                 : {retrieve_message, unwrap('$3')}.
+expression -> drain string                                    : {drain_queue, unwrap('$2')}.
 
 route_desc -> route from string to string                                 : {unwrap('$3'), unwrap('$5'), ""}.
 route_desc -> route from string to string when_sym routing_key is string  : {unwrap('$3'), unwrap('$5'), unwrap('$9')}.

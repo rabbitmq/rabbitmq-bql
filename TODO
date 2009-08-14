@@ -1,6 +1,18 @@
-- Queue based access mechanism
+- Assume that the broker is running in the same VM, i.e. get rid of
+  rpc_call()
+- Drain queues to the server side
 - Accept keywords as terms in predicates
-- Use keyword allowing the vhost to be switched
+- Remove the use of the Erlang AMQP client in the applicator module
+- Allow layered commands so that a thick client can submit a term list as well
+as an unparsed string (so that this works for thin clients as well) 
+  -- use content-type to demarcate what type it is, defaulting to unparsed
+     so that thin clients don't need to set this
+- Drop Erlang RPC as transport, just use AMQP to get commands in to BQL
+
+Refactoring:
+- Tab indent = 4
+- Some commands take the state of a server as the first argument, which
+  is not very Erlangly
 
 Nice to haves:
 - drop connection force where user='guest' and host='host' and port='port';
@@ -10,3 +22,6 @@ Nice to haves:
 - Runlevel changes - ie, drop broker into a maintenance mode
 - Creating checkpoints (mnesia, and queues)
 - Activate checkpoint
+
+Bugs
+- When the parser generator fails, this does not fail the build

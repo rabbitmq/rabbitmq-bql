@@ -159,17 +159,24 @@ apply_command(#state { ch = Ch }, {post_message, Exchange, RoutingKey, Msg}) ->
   end;
 
 % Retreving Messages
-apply_command(#state { ch = Ch, node = Node }, {retrieve_message, Queue}) ->
-  case rpc_call(Node, rabbit_amqqueue, lookup,
-                         [{resource, <<"/">>, queue, list_to_binary(Queue)}]) of
-    {error, not_found} ->
-      unknown_queue;
-    {ok,_} ->
-      case lib_amqp:get(Ch, list_to_binary(Queue)) of
-       'basic.get_empty'            -> empty;
-       #amqp_msg{payload = Payload} -> Payload
-      end
-  end;
+apply_command(State = #state{ch = Ch}, {retrieve_message, Q}) ->
+  with_queue(State, fun() -> poll(Ch, Q) end, Q);
+
+%% This drains messages to a file on the server
+apply_command(State = #state{ch = Ch}, {drain_queue, Q}) ->
+  Fun = 
+    fun() ->
+      case disk_log:open([{name, Q}, {type, halt}]) of
+       {ok, Log} -> drain_loop(Ch, Q, Log);
+       {repaired, Log, _, _} -> drain_loop(Ch, Q, Log);
+       {error, Reason} ->
+         error_logger:error_msg("Could not open disk log for"
+                                " queue (~p): ~p~n", [Q, Reason]),
+         not_ok
+      end,
+      ok
+    end,
+  with_queue(State, Fun, Q);
 
 apply_command(#state {}, {select, EntityName, _, _}) ->
   lists:flatten("Unknown entity " ++ EntityName ++ " specified to query");
@@ -177,6 +184,31 @@ apply_command(#state {}, {select, EntityName, _, _}) ->
 % Catch-all  
 apply_command(_State, Unknown) ->
   debug("Unknown command: ~p~n", [Unknown]).
+
+drain_loop(Channel, Q, Log) ->
+  case poll(Channel, Q) of
+    empty -> ok;
+    Payload ->
+      case disk_log:blog(Log, Payload) of
+        ok -> drain_loop(Channel, Q, Log);
+        _ -> ok
+      end
+  end,
+  disk_log:close(Log),
+  ok.
+
+with_queue(#state{node = Node}, Fun, Queue) ->
+  case rpc_call(Node, rabbit_amqqueue, lookup,
+                [{resource, <<"/">>, queue, list_to_binary(Queue)}]) of
+    {error, not_found} -> unknown_queue;
+    {ok,_} -> Fun()
+  end.
+
+poll(Channel, Queue) ->
+  case lib_amqp:get(Channel, list_to_binary(Queue)) of
+    'basic.get_empty'            -> empty;
+    #amqp_msg{payload = Payload} -> Payload
+  end.
 
 % Debug Control
 debug(_Format, _Params) ->
