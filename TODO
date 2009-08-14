@@ -8,6 +8,7 @@ as an unparsed string (so that this works for thin clients as well)
   -- use content-type to demarcate what type it is, defaulting to unparsed
      so that thin clients don't need to set this
 - Drop Erlang RPC as transport, just use AMQP to get commands in to BQL
+- Test case for draining queues
 
 Refactoring:
 - Tab indent = 4
