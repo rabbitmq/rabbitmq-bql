@@ -12,7 +12,7 @@ LEXER_NAME=command_lexer
 PARSER_NAME=command_parser
 
 src/command_lexer.erl: ebin/leex.beam src/command_lexer.xrl
-	$(ERL) -I -pa ebin -noshell -eval 'leex:file("$(SOURCE_DIR)/$(LEXER_NAME).xrl",[{outdir,"$(SOURCE_DIR)"}]), halt().'
+	$(ERL) -I -pa ebin -noshell -eval 'ok = leex:file("$(SOURCE_DIR)/$(LEXER_NAME).xrl",[{outdir,"$(SOURCE_DIR)"}]), halt().'
 
 src/command_parser.erl: ebin/leex.beam src/command_parser.yrl
-	$(ERL) -I -pa ebin -noshell -eval 'yecc:file("$(SOURCE_DIR)/$(PARSER_NAME)"), halt().'
+	$(ERL) -I -pa ebin -noshell -eval '{ok, _} = yecc:file("$(SOURCE_DIR)/$(PARSER_NAME)"), halt().'

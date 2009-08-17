@@ -25,4 +25,3 @@ Nice to haves:
 - Activate checkpoint
 
 Bugs
-- When the parser generator fails, this does not fail the build
