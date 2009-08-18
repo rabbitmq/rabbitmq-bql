@@ -2,7 +2,6 @@
   rpc_call()
 - Drain queues to the server side
 - Accept keywords as terms in predicates
-- Remove the use of the Erlang AMQP client in the applicator module
 - Allow layered commands so that a thick client can submit a term list as well
 as an unparsed string (so that this works for thin clients as well) 
   -- use content-type to demarcate what type it is, defaulting to unparsed

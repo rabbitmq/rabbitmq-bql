@@ -127,8 +127,7 @@ select_binding_with_where_clause_not_in_result_test() ->
     ok.
 
 select_connections_test() ->
-    [{_, Result}] = execute("select * from connections"),
-    ?assert(length(Result) > 0).
+    execute("select * from connections").
 
 post_message_test() ->
     [ok] = execute("create exchange mynondurableexchange;"),
@@ -136,7 +135,7 @@ post_message_test() ->
 
 post_message_with_routing_key_test() ->
     [ok] = execute("create exchange mynondurableexchange;"),
-    [ok] = execute("post 'Hello World' to mynondurableexchange with routing_key rk;").
+    ["Message was unroutable"] = execute("post 'Hello World' to mynondurableexchange with routing_key rk;").
 
 purge_queue_test() ->
     [ok] = execute("create queue mypurgingqueue;"),
@@ -155,7 +154,7 @@ retrieve_message_test() ->
     [Response2] = execute("get from mydeliveryqueue;"),
     ?assertEqual(empty, Response2),
     [Response3] = execute("get from bogusqueue;"),
-    ?assertEqual(unknown_queue, Response3).
+    ?assertEqual("queue 'bogusqueue' in vhost '/' not found", Response3).
     
 select_exchange_with_raw_test() ->
     Result = execute_raw([{select, "exchanges", [name], {{eq, name, "amq.topic"}, none}}]),
