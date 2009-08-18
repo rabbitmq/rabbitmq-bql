@@ -130,8 +130,3 @@ handle_info({#'basic.deliver'{},
 code_change(_OldVsn, State, _Extra) ->
     State.
 
-decode_properties(ClassId, Properties, PropertiesBin) ->
-  case Properties of
-    none -> rabbit_framing:decode_properties(ClassId, PropertiesBin);
-    _    -> Properties
-  end.
