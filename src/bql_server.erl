@@ -26,61 +26,94 @@
 
 -behaviour(gen_server).
 
--export([start/0, start/2, stop/0, stop/1, start_link/0, send_command/3]).
+-export([start/0, start/2, stop/0, stop/1, start_link/0, send_command/4]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {}).
 
 start() ->
-  start_link(),
-  ok.
+    start_link(),
+    ok.
 
 start(normal, []) ->
-  start_link().
+    start_link().
 
 stop() ->
-  ok.
+    ok.
 
 stop(_State) ->
-  stop().
+    stop().
 
 start_link() ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-send_command(Username, Password, Command) ->
-  gen_server:call(?MODULE, {execute, Username, Password, Command}).
+send_command(Username, Password, ContentType, Command) ->
+    gen_server:call(?MODULE, {execute, Username, Password, ContentType, Command}).
 
 %---------------------------
 % Gen Server Implementation
 % --------------------------
 
 init([]) ->
-  {ok, #state{}}.
+    {ok, #state{}}.
 
 handle_call(Msg,_From,State = #state{}) ->
-  case Msg of
-    {execute, _Username, _Password, Command} ->
-      % rabbit_access_control:user_pass_login(Username, Password),
+    case catch handle_message(Msg) of
+        {reply, Content} ->
+            {reply, Content, State};
+        {'EXIT', {amqp,access_refused,ErrorMsg,none}} ->
+            {reply, {error, ErrorMsg}, State};
+        {'EXIT', Reason} ->
+            {reply, {error, Reason}, State};
+        Response ->
+            {reply, {error, Response}, State}
+    end.
 
-      % rabbit_access_control:check_resource_access(Username, Resource, Perm)
-      % select name,depth from queues where name = 'amq.control'; => [{name, depth}, {"amq.control", 5}]
+handle_cast(_,State) -> 
+    {noreply, State}.
+    
+handle_info(_Info, State) -> 
+    {noreply, State}.
+    
+terminate(_,_) -> 
+    ok.
 
-     case commands:parse(Command) of
+code_change(_OldVsn, State, _Extra) -> 
+    {ok, State}.
+
+%% Message Handling
+handle_message({execute, Username, Password, ContentType, Command}) ->
+    %% Validate the user credentials
+    rabbit_access_control:user_pass_login(Username, Password),
+    
+    %% Parse the input based on the content type
+    ParsedCommands = case ContentType of
+        <<"text/bql">> ->
+            commands:parse(Command);
+        <<"application/bql-terms">> ->
+            list_to_term(Command)
+    end,
+    
+    % rabbit_access_control:check_resource_access(Username, Resource, Perm)
+    
+    case ParsedCommands of
         {ok, Commands} ->
-          case bql_applicator:apply_commands(Commands) of
-            {ok, Result} ->
-              {reply, {ok, Result}, State};
-            {error, Reason} ->
-              {reply, {error, Reason}, State}
-          end;
+            case bql_applicator:apply_commands(Commands, Username) of
+                {ok, Result} ->
+                    {reply, {ok, Result}};
+                {error, Reason} ->
+                    {reply, {error, Reason}}
+            end;
         {error, Reason} ->
-            {reply, {error, Reason}, State}
-     end;
-    _ ->
-      {reply, unknown_command, State}
-  end. 
+            {reply, {error, Reason}}
+    end;
+handle_message(_) ->
+    {reply, unknown_command}.
 
-handle_cast(_,State) -> {reply,unhandled_cast,State}.
-handle_info(_Info, State) -> {reply, unhandled_info, State}.
-terminate(_,_) -> ok.
-code_change(_OldVsn, State, _Extra) -> {ok, State}.
+%%
+%% Helper Methods
+%%
+
+list_to_term(String) ->
+    {ok, T, _} = erl_scan:string(String++"."),
+    erl_parse:parse_term(T).

@@ -29,6 +29,7 @@
 -export([start_link/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-include_lib("amqp_client/include/amqp_client.hrl").
 -include_lib("rabbit_common/include/rabbit.hrl").
 -include_lib("rabbit_common/include/rabbit_framing.hrl").
 
@@ -38,7 +39,7 @@
 -define(QueueName, <<"bql.query">>).
 
 start_link() ->
-  gen_server:start_link(?MODULE, [], []).
+    gen_server:start_link(?MODULE, [], []).
 
 init([]) ->
     Connection = lib_amqp:start_connection(),
@@ -58,16 +59,15 @@ handle_cast(_,State) -> {reply,unhandled_cast,State}.
 handle_info(#'basic.consume_ok'{}, State) ->
     {noreply, State};
 handle_info({#'basic.deliver' { 'delivery_tag' = DeliveryTag },
-             {content, ClassId, Props, PropertiesBin, [Payload] }},
+             #amqp_msg{props = Props, payload = Payload }},
             State = #state { channel = Ch }) ->
-    #'P_basic'{correlation_id = CorrelationId,
-               reply_to = Q} = decode_properties(ClassId, Props, PropertiesBin),
+    #'P_basic'{correlation_id = CorrelationId, reply_to = Q} = Props,
     try
       ResponseObj = case rfc4627:decode(Payload) of
         {ok, RequestObj, _Rest} ->
           case rfc4627:get_field(RequestObj, "query") of 
             {ok, Query} ->
-              case bql_server:send_command(<<"guest">>, <<"guest">>, binary_to_list(Query)) of
+              case bql_server:send_command(<<"guest">>, <<"guest">>, <<"text/bql">>, binary_to_list(Query)) of
                 {ok, Result} ->
                   {obj, [{"success", true}, {"messages", format_result(Result)}]};
                 {error, Reason} ->
@@ -83,7 +83,8 @@ handle_info({#'basic.deliver' { 'delivery_tag' = DeliveryTag },
       Properties = #'P_basic'{correlation_id = CorrelationId},
       lib_amqp:publish(Ch, <<>>, Q, rfc4627:encode(ResponseObj), Properties)
     catch
-      Tag:Error -> io:fwrite("Caught error: ~p,~p~n", [Tag, Error])
+      Tag:Error -> io:fwrite("Caught error: ~p,~p,~p~n", [Tag, Error,
+                              erlang:get_stacktrace()])
     end,
     lib_amqp:ack(Ch, DeliveryTag),
     {noreply, State};
@@ -102,18 +103,13 @@ terminate(_Reason, #state { channel = Ch }) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-decode_properties(ClassId, Properties, PropertiesBin) ->
-  case Properties of
-    none -> rabbit_framing:decode_properties(ClassId, PropertiesBin);
-    _    -> Properties
-  end.
-
 format_result(Result) ->
-  [format_result_entry(E) || E <- Result].
+    [format_result_entry(E) || E <- Result].
 
 format_result_entry(ok) ->
-  <<"ok">>;
+    <<"ok">>;
 format_result_entry({Headers, Rows}) ->
-  [{obj, [{atom_to_list(Header), list_to_binary(bql_utils:convert_to_string(Cell))} || {Header, Cell} <- lists:zip(Headers, Row)]} || Row <- Rows];
+    [{obj, [{atom_to_list(Header), list_to_binary(bql_utils:convert_to_string(Cell))} || 
+                {Header, Cell} <- lists:zip(Headers, Row)]} || Row <- Rows];
 format_result_entry(Msg) when is_list(Msg) ->
-  list_to_binary(Msg).
+    list_to_binary(Msg).

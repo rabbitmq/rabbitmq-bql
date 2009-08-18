@@ -28,7 +28,8 @@ orderby_predicates orderby_predicate.
 
 Terminals
 create drop durable queue exchange exchange_type route from to routing_key is when_sym string select wildcard
-comma where comparator union order by asc desc user identified vhost grant revoke on purge post with get semi.
+comma where comparator union order by asc desc user identified vhost grant revoke on purge post with get semi
+drain.
 
 Rootsymbol statements.
 
@@ -38,15 +39,15 @@ statements -> expression semi statements : ['$1'] ++ '$3'.
 
 expression -> create vhost string                             : {create_vhost, unwrap('$3')}.
 expression -> drop vhost string                               : {drop_vhost, unwrap('$3')}.
-expression -> create queue string                             : {create_queue, unwrap('$3'), false}.
-expression -> create durable queue string                     : {create_queue, unwrap('$4'), true}.
+expression -> create queue string                             : {create_queue, unwrap('$3'), false, ""}.
+expression -> create durable queue string                     : {create_queue, unwrap('$4'), true, ""}.
 expression -> drop queue string                               : {drop_queue, unwrap('$3')}.
-expression -> create exchange string                          : {create_exchange, unwrap('$3'), direct, false}.
-expression -> create durable exchange string                  : {create_exchange, unwrap('$4'), direct, true}.
-expression -> create exchange_type exchange string            : {create_exchange, unwrap('$4'), unwrap('$2'), false}.
-expression -> create durable exchange_type exchange string    : {create_exchange, unwrap('$5'), unwrap('$3'), true}.
+expression -> create exchange string                          : {create_exchange, unwrap('$3'), direct, false, ""}.
+expression -> create durable exchange string                  : {create_exchange, unwrap('$4'), direct, true, ""}.
+expression -> create exchange_type exchange string            : {create_exchange, unwrap('$4'), unwrap('$2'), false, ""}.
+expression -> create durable exchange_type exchange string    : {create_exchange, unwrap('$5'), unwrap('$3'), true, ""}.
 expression -> drop exchange string                            : {drop_exchange, unwrap('$3')}.
-expression -> create route_desc                               : {create_binding, '$2'}.
+expression -> create route_desc                               : {create_binding, '$2', ""}.
 expression -> drop route_desc                                 : {drop_binding, '$2'}.
 expression -> create user string identified by string         : {create_user, unwrap('$3'), unwrap('$6')}.
 expression -> drop user string                                : {drop_user, unwrap('$3')}.
@@ -58,6 +59,7 @@ expression -> purge queue string                              : {purge_queue, un
 expression -> post string to string                           : {post_message, unwrap('$4'), "", unwrap('$2')}.
 expression -> post string to string with routing_key string   : {post_message, unwrap('$4'), unwrap('$7'), unwrap('$2')}.
 expression -> get from string                                 : {retrieve_message, unwrap('$3')}.
+expression -> drain string                                    : {drain_queue, unwrap('$2')}.
 
 route_desc -> route from string to string                                 : {unwrap('$3'), unwrap('$5'), ""}.
 route_desc -> route from string to string when_sym routing_key is string  : {unwrap('$3'), unwrap('$5'), unwrap('$9')}.

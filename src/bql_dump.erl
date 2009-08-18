@@ -77,22 +77,22 @@ stop() ->
     ok.
 
 execute_block(Contents, Formatter) ->
-  case rpc:call(localnode(rabbit), bql_server, send_command, [<<"guest">>, <<"guest">>, Contents]) of	
-    {ok, Result}    -> format(Result, Formatter);
-    {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
-  end.
+    case rpc:call(localnode(rabbit), bql_server, send_command, [<<"guest">>, <<"guest">>, Contents]) of	
+        {ok, Result}    -> format(Result, Formatter);
+        {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
+    end.
 
 durable_str(Row) ->
-  case lists:keysearch(durable, 1, Row) of
-    {value, {_, true}} -> "durable ";
-    _                  -> ""
-  end.
+    case lists:keysearch(durable, 1, Row) of
+        {value, {_, true}} -> "durable ";
+        _                  -> ""
+    end.
 
 
 format([{Headers, Rows}], Formatter) ->
-  Zipped = [lists:zip(Headers, Row) || Row <- Rows],
-  Formatted = [Formatter(Row) || Row <- Zipped],
-  lists:flatten(string:join([F || F <- Formatted, not(length(F) == 0)], "\n")).
+    Zipped = [lists:zip(Headers, Row) || Row <- Rows],
+    Formatted = [Formatter(Row) || Row <- Zipped],
+    lists:flatten(string:join([F || F <- Formatted, not(length(F) == 0)], "\n")).
 
 localnode(Name) ->
     %% Imported from rabbit_misc to remove the dependency on the Rabbit server!

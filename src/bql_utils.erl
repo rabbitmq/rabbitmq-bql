@@ -27,8 +27,8 @@
 -export([convert_to_string/1]).
 
 convert_to_string(Value) when is_list(Value) ->
-  Value;
+    Value;
 convert_to_string(Value) when is_binary(Value) ->
-  binary_to_list(Value);
+    binary_to_list(Value);
 convert_to_string(Value) ->
-  io_lib:write(Value).
+    io_lib:write(Value).
