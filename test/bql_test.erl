@@ -134,7 +134,17 @@ retrieve_message_test() ->
     ?assertEqual(empty, Response2),
     [Response3] = execute("get from bogusqueue;"),
     ?assertEqual(unknown_queue, Response3).
+    
+select_exchange_with_raw_test() ->
+    Result = execute_raw([{select, "exchanges", [name], {{eq, name, "amq.topic"}, none}}]),
+    ?assertEqual([{[name], [["amq.topic"]]}], Result).
 
 execute(Command) ->
-    {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, Command),
+    {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, <<"text/bql">>, Command),
+    Result.
+    
+execute_raw(Terms) ->
+    Formatted = lists:flatten(io_lib:format("~p", [Terms])),
+    {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, <<"application/bql-terms">>,
+                                           Formatted),
     Result.

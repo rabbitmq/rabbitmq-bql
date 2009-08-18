@@ -73,7 +73,8 @@ apply_bql_file(BQL) ->
     end.
 
 execute_block(Contents) ->
-    case rpc:call(localnode(rabbit), bql_server, send_command, [<<"guest">>, <<"guest">>, Contents]) of	
+    case rpc:call(localnode(rabbit), bql_server, send_command, 
+                    [<<"guest">>, <<"guest">>, <<"text/bql">>, Contents]) of	
         {ok, Result}    -> format_result(Result);
         {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
     end.
