@@ -24,7 +24,7 @@
 %%
 -module(bql_applicator).
 
--export([apply_commands/1]).
+-export([apply_commands/2]).
 
 -include("amqp_client.hrl").
 -include("rabbit.hrl").
@@ -32,9 +32,9 @@
 
 -define(RPC_TIMEOUT, 30000).
 
--record(state, {ch, node}).
+-record(state, {ch, node, user}).
 
-apply_commands(Commands) ->
+apply_commands(Commands, User) ->
     % Create an AMQP channel so we can actually perform operations
     Connection = lib_amqp:start_connection("localhost"),
     ControlCh = amqp_connection:open_channel(Connection),
@@ -43,31 +43,64 @@ apply_commands(Commands) ->
     Node = rabbit_misc:localnode(rabbit),
 
     try
-        {ok, [catch apply_command(Command, #state {ch = ControlCh, node = Node}) || Command <- Commands]}
+        {ok, [catch apply_command(Command, #state {ch = ControlCh, node = Node, user = User}) 
+                || Command <- Commands]}
     after
         lib_amqp:close_connection(Connection)
     end.
 
 % Queue Management
-apply_command({create_queue, Name, Durable}, #state {ch = ControlCh}) ->
-    lib_amqp:declare_queue(ControlCh, #'queue.declare'{queue = list_to_binary(Name), durable = Durable}),
+apply_command({create_queue, Name, Durable, Args}, #state {user = Username}) ->
+    QueueName = rabbit_misc:r(<<"/">>, queue, list_to_binary(Name)),
+    ensure_resource_access(Username, QueueName, configure),
+    rabbit_amqqueue:declare(QueueName, Durable, false, Args),
     ok;
-apply_command({drop_queue, Name}, #state {ch = ControlCh}) ->
-    lib_amqp:delete_queue(ControlCh, list_to_binary(Name)),
-    ok;
-apply_command({purge_queue, Name}, #state {ch = ControlCh}) ->
-    amqp_channel:call(ControlCh, #'queue.purge'{queue = list_to_binary(Name)}),
-    ok;
+apply_command({drop_queue, Name}, #state {user = Username}) ->
+    QueueName = rabbit_misc:r(<<"/">>, queue, list_to_binary(Name)),
+    ensure_resource_access(Username, QueueName, configure),
+    case rabbit_amqqueue:with(
+           QueueName,
+           fun (Q) -> rabbit_amqqueue:delete(Q, false, false) end) of
+        {ok, _Purged} ->
+            ok;
+        {error, not_found} ->
+            {error, io_lib:format("Queue ~s not found", [Name])}
+    end;
+apply_command({purge_queue, Name}, #state {user = Username}) ->
+    QueueName = rabbit_misc:r(<<"/">>, queue, list_to_binary(Name)),
+    ensure_resource_access(Username, QueueName, read),
+    rabbit_amqqueue:with_or_die(QueueName,
+                                fun (Q) -> rabbit_amqqueue:purge(Q) end);
 
 % Exchange Management
-apply_command({create_exchange, Name, Type, Durable}, #state {ch = ControlCh}) ->
-    amqp_channel:call(ControlCh, #'exchange.declare'{exchange = list_to_binary(Name),
-                                                     type = list_to_binary(atom_to_list(Type)),
-                                                     durable = Durable}),
+apply_command({create_exchange, Name, Type, Durable, Args}, #state {user = Username}) ->
+    CheckedType = rabbit_exchange:check_type(list_to_binary(atom_to_list(Type))),
+    ExchangeName = rabbit_misc:r(<<"/">>, exchange, list_to_binary(Name)),
+    ensure_resource_access(Username, ExchangeName, configure),
+    X = case rabbit_exchange:lookup(ExchangeName) of
+           {ok, FoundX} -> FoundX;
+           {error, not_found} ->
+               case rabbit_misc:r_arg(<<"/">>, exchange, Args,
+                                      <<"alternate-exchange">>) of
+                   undefined -> ok;
+                   AName     -> ensure_resource_access(Username, ExchangeName, read),
+                                ensure_resource_access(Username, AName, write),
+                                ok
+               end,
+               rabbit_exchange:declare(ExchangeName, CheckedType,
+                                       Durable, false, Args)
+       end,
+    ok = rabbit_exchange:assert_type(X, CheckedType),
     ok;
-apply_command({drop_exchange, Name}, #state {ch = ControlCh}) ->
-    lib_amqp:delete_exchange(ControlCh, list_to_binary(Name)),
-    ok;
+apply_command({drop_exchange, Name}, #state {user = Username}) ->
+    ExchangeName = rabbit_misc:r(<<"/">>, exchange, list_to_binary(Name)),
+    ensure_resource_access(Username, ExchangeName, configure),
+    case rabbit_exchange:delete(ExchangeName, false) of
+        {error, not_found} ->
+            io_lib:format("Unknown exchange ~s", [Name]);
+        ok ->
+            ok
+    end;
 
 % User Management
 apply_command({create_user, Name, Password}, #state {node = Node}) ->
@@ -383,3 +416,6 @@ retrieve_privileges(Node, User) ->
         0 -> [{configure, <<"">>}, {write, <<"">>}, {read, <<"">>}];
         _ -> lists:nth(1, UserPermissions)
     end.
+
+ensure_resource_access(Username, Resource, Perm) ->
+    rabbit_access_control:check_resource_access(Username, Resource, Perm).

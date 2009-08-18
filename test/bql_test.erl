@@ -122,14 +122,20 @@ post_message_with_routing_key_test() ->
     [ok] = execute("create exchange mynondurableexchange;"),
     [ok] = execute("post 'Hello World' to mynondurableexchange with routing_key rk;").
 
+purge_queue_test() ->
+    [ok] = execute("create queue mypurgingqueue;"),
+    [{ok, 0}] = execute("purge queue mypurgingqueue;"),
+    [ok] = execute("post 'Some Message' to '' with routing_key 'mypurgingqueue';"),
+    [{ok, 1}] = execute("purge queue mypurgingqueue;").
+
 retrieve_message_test() ->
     [ok, ok] = execute("create exchange mydeliveryexchange; create queue mydeliveryqueue;"),
-    [ok] = execute("purge queue mydeliveryqueue;"),
+    [{ok, 0}] = execute("purge queue mydeliveryqueue;"),
     [ok] = execute("create route from mydeliveryexchange to mydeliveryqueue;"),
     [ok] = execute("post 'Some Message' to mydeliveryexchange;"),
     [Response1] = execute("get from mydeliveryqueue;"),
     ?assertEqual(<<"Some Message">>, Response1),
-    [ok] = execute("purge queue mydeliveryqueue;"),
+    [{ok, 0}] = execute("purge queue mydeliveryqueue;"),
     [Response2] = execute("get from mydeliveryqueue;"),
     ?assertEqual(empty, Response2),
     [Response3] = execute("get from bogusqueue;"),

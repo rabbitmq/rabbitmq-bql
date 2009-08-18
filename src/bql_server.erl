@@ -98,7 +98,7 @@ handle_message({execute, Username, Password, ContentType, Command}) ->
     
     case ParsedCommands of
         {ok, Commands} ->
-            case bql_applicator:apply_commands(Commands) of
+            case bql_applicator:apply_commands(Commands, Username) of
                 {ok, Result} ->
                     {reply, {ok, Result}};
                 {error, Reason} ->

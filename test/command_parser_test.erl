@@ -30,27 +30,27 @@
 
 create_queue_with_nosemi_test() ->
     {ok, Commands} = commands:parse("create queue blah"),
-    ?assert([{create_queue,"blah",false}] =:= Commands).
+    ?assert([{create_queue,"blah",false, ""}] =:= Commands).
 
 create_nondurable_queue_test() ->
     {ok, Commands} = commands:parse("create queue blah;"),
-    ?assert([{create_queue,"blah",false}] =:= Commands).
+    ?assert([{create_queue,"blah",false, ""}] =:= Commands).
 
 create_nondurable_queue_with_space_in_name_test() ->
     {ok, Commands} = commands:parse("create queue 'bl ah';"),
-    ?assert([{create_queue,"bl ah",false}] =:= Commands).
+    ?assert([{create_queue,"bl ah",false, ""}] =:= Commands).
 
 create_nondurable_queue_with_exotic_name_test() ->
     {ok, Commands} = commands:parse("create queue b.a-t_b;"),
-    ?assert([{create_queue,"b.a-t_b",false}] =:= Commands).
+    ?assert([{create_queue,"b.a-t_b",false, ""}] =:= Commands).
 
 create_durable_queue_test() ->
     {ok, Commands} = commands:parse("create durable queue 'blah';"),
-    ?assert([{create_queue,"blah",true}] =:= Commands).
+    ?assert([{create_queue,"blah",true, ""}] =:= Commands).
 
 create_multiple_queues_test() ->
     {ok, Commands} = commands:parse("create durable queue 'blah'; create queue 'blah2';"),
-    ?assert([{create_queue,"blah",true}, {create_queue,"blah2", false}] =:= Commands).
+    ?assert([{create_queue,"blah",true, ""}, {create_queue,"blah2", false, ""}] =:= Commands).
 
 drop_queue_test() ->
     {ok, Commands} = commands:parse("drop queue 'myqueue';"),
@@ -58,39 +58,39 @@ drop_queue_test() ->
 
 create_default_exchange_test() ->
     {ok, Commands} = commands:parse("create exchange 'myex';"),
-    ?assert([{create_exchange,"myex",direct,false}] =:= Commands).
+    ?assert([{create_exchange,"myex",direct,false,""}] =:= Commands).
 
 create_direct_exchange_test() ->
     {ok, Commands} = commands:parse("create direct exchange 'myex';"),
-    ?assert([{create_exchange,"myex",direct,false}] =:= Commands).
+    ?assert([{create_exchange,"myex",direct,false,""}] =:= Commands).
 
 create_headers_exchange_test() ->
     {ok, Commands} = commands:parse("create headers exchange 'myex';"),
-    ?assert([{create_exchange,"myex",headers,false}] =:= Commands).
+    ?assert([{create_exchange,"myex",headers,false,""}] =:= Commands).
 
 create_fanout_exchange_test() ->
     {ok, Commands} = commands:parse("create fanout exchange 'myex';"),
-    ?assert([{create_exchange,"myex",fanout,false}] =:= Commands).
+    ?assert([{create_exchange,"myex",fanout,false,""}] =:= Commands).
 
 create_topic_exchange_test() ->
     {ok, Commands} = commands:parse("create topic exchange 'myex';"),
-    ?assert([{create_exchange,"myex",topic,false}] =:= Commands).
+    ?assert([{create_exchange,"myex",topic,false,""}] =:= Commands).
 
 create_durable_default_exchange_test() ->
     {ok, Commands} = commands:parse("create durable exchange 'myex';"),
-    ?assert([{create_exchange,"myex",direct,true}] =:= Commands).
+    ?assert([{create_exchange,"myex",direct,true,""}] =:= Commands).
 
 create_durable_direct_exchange_test() ->
     {ok, Commands} = commands:parse("create durable direct exchange 'myex';"),
-    ?assert([{create_exchange,"myex",direct,true}] =:= Commands).
+    ?assert([{create_exchange,"myex",direct,true,""}] =:= Commands).
 
 create_durable_headers_exchange_test() ->
     {ok, Commands} = commands:parse("create durable headers exchange 'myex';"),
-    ?assert([{create_exchange,"myex",headers,true}] =:= Commands).
+    ?assert([{create_exchange,"myex",headers,true,""}] =:= Commands).
 
 create_durable_fanout_exchange_test() ->
     {ok, Commands} = commands:parse("create durable fanout exchange 'myex';"),
-    ?assert([{create_exchange,"myex",fanout,true}] =:= Commands).
+    ?assert([{create_exchange,"myex",fanout,true,""}] =:= Commands).
 
 drop_exchange_test() ->
     {ok, Commands} = commands:parse("drop exchange 'myex';"),
