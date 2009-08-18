@@ -43,72 +43,72 @@ apply_commands(Commands) ->
     Node = rabbit_misc:localnode(rabbit),
 
     try
-        {ok, [catch apply_command(#state {ch = ControlCh, node = Node}, Command) || Command <- Commands]}
+        {ok, [catch apply_command(Command, #state {ch = ControlCh, node = Node}) || Command <- Commands]}
     after
         lib_amqp:close_connection(Connection)
     end.
 
 % Queue Management
-apply_command(#state {ch = ControlCh}, {create_queue, Name, Durable}) ->
+apply_command({create_queue, Name, Durable}, #state {ch = ControlCh}) ->
     lib_amqp:declare_queue(ControlCh, #'queue.declare'{queue = list_to_binary(Name), durable = Durable}),
     ok;
-apply_command(#state {ch = ControlCh}, {drop_queue, Name}) ->
+apply_command({drop_queue, Name}, #state {ch = ControlCh}) ->
     lib_amqp:delete_queue(ControlCh, list_to_binary(Name)),
     ok;
-apply_command(#state {ch = ControlCh}, {purge_queue, Name}) ->
+apply_command({purge_queue, Name}, #state {ch = ControlCh}) ->
     amqp_channel:call(ControlCh, #'queue.purge'{queue = list_to_binary(Name)}),
     ok;
 
 % Exchange Management
-apply_command(#state {ch = ControlCh}, {create_exchange, Name, Type, Durable}) ->
+apply_command({create_exchange, Name, Type, Durable}, #state {ch = ControlCh}) ->
     amqp_channel:call(ControlCh, #'exchange.declare'{exchange = list_to_binary(Name),
                                                      type = list_to_binary(atom_to_list(Type)),
                                                      durable = Durable}),
     ok;
-apply_command(#state {ch = ControlCh}, {drop_exchange, Name}) ->
+apply_command({drop_exchange, Name}, #state {ch = ControlCh}) ->
     lib_amqp:delete_exchange(ControlCh, list_to_binary(Name)),
     ok;
 
 % User Management
-apply_command(#state {node = Node}, {create_user, Name, Password}) ->
+apply_command({create_user, Name, Password}, #state {node = Node}) ->
     rpc_call(Node, rabbit_access_control, add_user, [list_to_binary(Name), list_to_binary(Password)]),
     ok;
-apply_command(#state {node = Node}, {drop_user, Name}) ->
+apply_command({drop_user, Name}, #state {node = Node}) ->
     rpc_call(Node, rabbit_access_control, delete_user, [list_to_binary(Name)]),
     ok;
 
 % VHost Management
-apply_command(#state {node = Node}, {create_vhost, Name}) ->
+apply_command({create_vhost, Name}, #state {node = Node}) ->
     rpc_call(Node, rabbit_access_control, add_vhost, [list_to_binary(Name)]),
     ok;
-apply_command(#state {node = Node}, {drop_vhost, Name}) ->
+apply_command({drop_vhost, Name}, #state {node = Node}) ->
     rpc_call(Node, rabbit_access_control, delete_vhost, [list_to_binary(Name)]),
     ok;
 
 % Binding Management
-apply_command(#state {ch = ControlCh}, {create_binding, {X, Q, RoutingKey}}) ->
+apply_command({create_binding, {X, Q, RoutingKey}}, #state {ch = ControlCh}) ->
     lib_amqp:bind_queue(ControlCh, list_to_binary(X), list_to_binary(Q), list_to_binary(RoutingKey)),
     ok;
-apply_command(#state {ch = ControlCh}, {drop_binding, {X, Q, RoutingKey}}) ->
+apply_command({drop_binding, {X, Q, RoutingKey}}, #state {ch = ControlCh}) ->
     lib_amqp:unbind_queue(ControlCh, list_to_binary(X), list_to_binary(Q), list_to_binary(RoutingKey)),
     ok;
 
 % Privilege Management
-apply_command(#state {node = Node}, {grant, Privilege, Regex, User}) ->
+apply_command({grant, Privilege, Regex, User}, #state {node = Node}) ->
     PrivilegeList = expand_privilege_list(Privilege),
     apply_privilege_list(Node, list_to_binary(User), PrivilegeList, list_to_binary(Regex));
-apply_command(#state {node = Node}, {revoke, Privilege, User}) ->
+apply_command({revoke, Privilege, User}, #state {node = Node}) ->
     PrivilegeList = expand_privilege_list(Privilege),
     apply_privilege_list(Node, list_to_binary(User), PrivilegeList, <<"">>);
   
 % Queries
-apply_command(#state {node = Node}, {select, "exchanges", Fields, Modifiers}) ->
+apply_command({select, "exchanges", Fields, Modifiers}, #state {node = Node}) ->
     AllFieldList = [name, type, durable, auto_delete, arguments],
     FieldList = validate_fields(AllFieldList, Fields),
     Exchanges = rpc_call(Node, rabbit_exchange, info_all, [<<"/">>]),
     interpret_response(AllFieldList, FieldList, Exchanges, Modifiers);
 
-apply_command(#state {node = Node}, {select, "queues", Fields, Modifiers}) ->
+apply_command({select, "queues", Fields, Modifiers}, #state {node = Node}) ->
     AllFieldList = [name, durable, auto_delete, arguments, pid, messages_ready,
                     messages_unacknowledged, messages_uncommitted, messages, acks_uncommitted,
                     consumers, transactions, memory],
@@ -116,33 +116,33 @@ apply_command(#state {node = Node}, {select, "queues", Fields, Modifiers}) ->
     Queues = rpc_call(Node, rabbit_amqqueue, info_all, [<<"/">>]),
     interpret_response(AllFieldList, FieldList, Queues, Modifiers);
 
-apply_command(#state {node = Node}, {select, "bindings", Fields, Modifiers}) ->
+apply_command({select, "bindings", Fields, Modifiers}, #state {node = Node}) ->
     AllFieldList = [exchange_name, queue_name, routing_key, args],
     FieldList = validate_fields(AllFieldList, Fields),
     Bindings = rpc_call(Node, rabbit_exchange, list_bindings, [<<"/">>]),
     interpret_response(AllFieldList, FieldList, Bindings, Modifiers);
 
-apply_command(#state {node = Node}, {select, "users", Fields, Modifiers}) ->
+apply_command({select, "users", Fields, Modifiers}, #state {node = Node}) ->
     AllFieldList = [name],
     FieldList = validate_fields(AllFieldList, Fields),
     Response = rpc_call(Node, rabbit_access_control, list_users, []),
     Users = [[binary_to_list(User)] || User <- Response],
     interpret_response(AllFieldList, FieldList, Users, Modifiers);
 
-apply_command(#state {node = Node}, {select, "vhosts", Fields, Modifiers}) ->
+apply_command({select, "vhosts", Fields, Modifiers}, #state {node = Node}) ->
     AllFieldList = [name],
     FieldList = validate_fields(AllFieldList, Fields),
     Response = rpc_call(Node, rabbit_access_control, list_vhosts, []),
     VHosts = [[{name, binary_to_list(User)}] || User <- Response],
     interpret_response(AllFieldList, FieldList, VHosts, Modifiers);
 
-apply_command(#state {node = Node}, {select, "permissions", Fields, Modifiers}) ->
+apply_command({select, "permissions", Fields, Modifiers}, #state {node = Node}) ->
     AllFieldList = [username,configure_perm,write_perm,read_perm],
     FieldList = validate_fields(AllFieldList, Fields),
     Permissions = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [<<"/">>]),
     interpret_response(AllFieldList, FieldList, Permissions, Modifiers);
 
-apply_command(#state {node = Node}, {select, "connections", Fields, Modifiers}) ->
+apply_command({select, "connections", Fields, Modifiers}, #state {node = Node}) ->
     AllFieldList = [pid, address, port, peer_address, peer_port, recv_oct, recv_cnt, send_oct, send_cnt,
                     send_pend, state, channels, user, vhost, timeout, frame_max],
     FieldList = validate_fields(AllFieldList, Fields),
@@ -150,7 +150,7 @@ apply_command(#state {node = Node}, {select, "connections", Fields, Modifiers}) 
     interpret_response(AllFieldList, FieldList, Connections, Modifiers);
 
 % Sending Messages
-apply_command(#state { ch = Ch }, {post_message, Exchange, RoutingKey, Msg}) ->
+apply_command({post_message, Exchange, RoutingKey, Msg}, #state { ch = Ch }) ->
     Properties = #'P_basic'{ delivery_mode = 1 },
     case lib_amqp:publish(Ch, list_to_binary(Exchange), list_to_binary(RoutingKey), 
                           list_to_binary(Msg), Properties) of
@@ -159,11 +159,11 @@ apply_command(#state { ch = Ch }, {post_message, Exchange, RoutingKey, Msg}) ->
     end;
 
 % Retreving Messages
-apply_command(State = #state{ch = Ch}, {retrieve_message, Q}) ->
+apply_command({retrieve_message, Q}, State = #state{ch = Ch}) ->
     with_queue(State, fun() -> poll(Ch, Q) end, Q);
 
 %% This drains messages to a file on the server
-apply_command(State = #state{ch = Ch}, {drain_queue, Q}) ->
+apply_command({drain_queue, Q}, State = #state{ch = Ch}) ->
     Fun = 
         fun() ->
             case disk_log:open([{name, Q}, {type, halt}]) of
@@ -178,11 +178,11 @@ apply_command(State = #state{ch = Ch}, {drain_queue, Q}) ->
         end,
   with_queue(State, Fun, Q);
 
-apply_command(#state {}, {select, EntityName, _, _}) ->
+apply_command({select, EntityName, _, _}, #state {}) ->
     lists:flatten("Unknown entity " ++ EntityName ++ " specified to query");
 
 % Catch-all  
-apply_command(_State, Unknown) ->
+apply_command(Unknown, _State) ->
     debug("Unknown command: ~p~n", [Unknown]).
 
 drain_loop(Channel, Q, Log) ->

@@ -12,8 +12,6 @@ as an unparsed string (so that this works for thin clients as well)
 - Add at least rudimentary support for security
 
 Refactoring:
-- Some commands take the state of a server as the first argument, which
-  is not very Erlangly
 
 Nice to haves:
 - drop connection force where user='guest' and host='host' and port='port';
