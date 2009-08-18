@@ -26,8 +26,8 @@
 
 -export([apply_commands/2]).
 
--include("rabbit.hrl").
--include("rabbit_framing.hrl").
+-include_lib("rabbit_common/include/rabbit.hrl").
+-include_lib("rabbit_common/include/rabbit_framing.hrl").
 
 -define(RPC_TIMEOUT, 30000).
 

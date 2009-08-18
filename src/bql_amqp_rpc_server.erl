@@ -29,9 +29,9 @@
 -export([start_link/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--include("rabbit.hrl").
--include("amqp_client.hrl").
--include("rabbit_framing.hrl").
+-include_lib("amqp_client/include/amqp_client.hrl").
+-include_lib("rabbit_common/include/rabbit.hrl").
+-include_lib("rabbit_common/include/rabbit_framing.hrl").
 
 -record(state, { channel }).
 
@@ -83,7 +83,8 @@ handle_info({#'basic.deliver' { 'delivery_tag' = DeliveryTag },
       Properties = #'P_basic'{correlation_id = CorrelationId},
       lib_amqp:publish(Ch, <<>>, Q, rfc4627:encode(ResponseObj), Properties)
     catch
-      Tag:Error -> io:fwrite("Caught error: ~p,~p~n", [Tag, Error])
+      Tag:Error -> io:fwrite("Caught error: ~p,~p,~p~n", [Tag, Error,
+                              erlang:get_stacktrace()])
     end,
     lib_amqp:ack(Ch, DeliveryTag),
     {noreply, State};

@@ -25,9 +25,9 @@
 
 -module(bql_amqp_rpc_client).
 
--include_lib("rabbit_framing.hrl").
--include_lib("rabbit.hrl").
--include("amqp_client.hrl").
+-include_lib("rabbit_common/include/rabbit_framing.hrl").
+-include_lib("rabbit_common/include/rabbit.hrl").
+-include_lib("amqp_client/include/amqp_client.hrl").
 
 -behaviour(gen_server).
 
@@ -130,8 +130,3 @@ handle_info({#'basic.deliver'{},
 code_change(_OldVsn, State, _Extra) ->
     State.
 
-decode_properties(ClassId, Properties, PropertiesBin) ->
-  case Properties of
-    none -> rabbit_framing:decode_properties(ClassId, PropertiesBin);
-    _    -> Properties
-  end.
