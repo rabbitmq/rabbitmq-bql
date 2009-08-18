@@ -98,11 +98,11 @@ drop_exchange_test() ->
 
 create_binding_with_no_routing_key_test() ->
     {ok, Commands} = commands:parse("create route from 'myex' to 'myqueue';"),
-    ?assert([{create_binding,{"myex","myqueue",""}}] =:= Commands).
+    ?assert([{create_binding,{"myex","myqueue",""},""}] =:= Commands).
 
 create_binding_with_routing_key_test() ->
     {ok, Commands} = commands:parse("create route from 'myex' to 'myqueue' when routing_key is 'Hello';"),
-    ?assert([{create_binding,{"myex","myqueue","Hello"}}] =:= Commands).
+    ?assert([{create_binding,{"myex","myqueue","Hello"},""}] =:= Commands).
 
 drop_binding_with_no_routing_key_test() ->
     {ok, Commands} = commands:parse("drop route from 'myex' to 'myqueue';"),

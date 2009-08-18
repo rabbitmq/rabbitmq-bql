@@ -85,6 +85,22 @@ drop_user_test() ->
     [{_, Result}] = execute("select * from users where name=anotheruserfordropping;"),
     ?assertEqual(0, length(Result)),
     ok.
+    
+create_route_from_bad_exchange_test() ->
+    [ok] = execute("create queue forbadexchange"),
+    ?assertEqual(["exchange 'missing' in vhost '/' not found"], execute("create route from missing to forbadexchange")).
+        
+create_route_to_bad_queue_test() ->
+    [ok] = execute("create exchange forbadqueue"),
+    ?assertEqual(["queue 'missing' in vhost '/' not found"], execute("create route from forbadqueue to missing")).
+    
+create_route_from_nondurable_exchange_to_durable_queue_test() ->
+    [ok] = execute("create exchange nondurableexchange"),
+    [ok] = execute("create durable queue mydurablequeue"),
+    ?assertEqual(["Durability settings of " ++
+                  "queue 'mydurablequeue' in vhost '/' " ++
+                  "incompatible with exchange 'nondurableexchange' in vhost '/'"],
+                 execute("create route from nondurableexchange to mydurablequeue")).
 
 select_permission_with_where_clause_not_in_result_test() ->
     [{_, Result}] = execute("select username from permissions where username='guest' and read_perm='.*';"),

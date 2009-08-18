@@ -119,12 +119,14 @@ apply_command({drop_vhost, Name}, #state {node = Node}) ->
     ok;
 
 % Binding Management
-apply_command({create_binding, {X, Q, RoutingKey}}, #state {ch = ControlCh}) ->
-    lib_amqp:bind_queue(ControlCh, list_to_binary(X), list_to_binary(Q), list_to_binary(RoutingKey)),
-    ok;
-apply_command({drop_binding, {X, Q, RoutingKey}}, #state {ch = ControlCh}) ->
-    lib_amqp:unbind_queue(ControlCh, list_to_binary(X), list_to_binary(Q), list_to_binary(RoutingKey)),
-    ok;
+apply_command({create_binding, {X, Q, RoutingKey}, Args}, #state {user = Username}) ->
+    binding_action(fun rabbit_exchange:add_binding/4, 
+                   list_to_binary(X), list_to_binary(Q),
+                   list_to_binary(RoutingKey), Args, Username);
+apply_command({drop_binding, {X, Q, RoutingKey}}, #state {user = Username}) ->
+    binding_action(fun rabbit_exchange:delete_binding/4, 
+                   list_to_binary(X), list_to_binary(Q),
+                   list_to_binary(RoutingKey), <<"">>, Username);
 
 % Privilege Management
 apply_command({grant, Privilege, Regex, User}, #state {node = Node}) ->
@@ -419,3 +421,26 @@ retrieve_privileges(Node, User) ->
 
 ensure_resource_access(Username, Resource, Perm) ->
     rabbit_access_control:check_resource_access(Username, Resource, Perm).
+    
+binding_action(Fun, ExchangeNameBin, QueueNameBin, RoutingKey, Arguments, Username) ->
+    QueueName = rabbit_misc:r(<<"/">>, queue, QueueNameBin),
+    ensure_resource_access(Username, QueueName, write),
+    ExchangeName = rabbit_misc:r(<<"/">>, exchange, ExchangeNameBin),
+    ensure_resource_access(Username, ExchangeName, read),
+    case Fun(ExchangeName, QueueName, RoutingKey, Arguments) of
+        {error, exchange_not_found} ->
+            lists:flatten(io_lib:format("~s not found", [rabbit_misc:rs(ExchangeName)]));
+        {error, queue_not_found} ->
+            lists:flatten(io_lib:format("~s not found", [rabbit_misc:rs(QueueName)]));
+        {error, exchange_and_queue_not_found} ->
+            lists:flatten(io_lib:format("Neither ~s nor ~s exist",
+                                        [rabbit_misc:rs(ExchangeName), 
+                                         rabbit_misc:rs(QueueName)]));
+        {error, binding_not_found} ->
+            ok;
+        {error, durability_settings_incompatible} ->
+            lists:flatten(io_lib:format("Durability settings of ~s incompatible with ~s",
+                                        [rabbit_misc:rs(QueueName), 
+                                         rabbit_misc:rs(ExchangeName)]));
+        ok -> ok
+    end.

@@ -47,7 +47,7 @@ expression -> create durable exchange string                  : {create_exchange
 expression -> create exchange_type exchange string            : {create_exchange, unwrap('$4'), unwrap('$2'), false, ""}.
 expression -> create durable exchange_type exchange string    : {create_exchange, unwrap('$5'), unwrap('$3'), true, ""}.
 expression -> drop exchange string                            : {drop_exchange, unwrap('$3')}.
-expression -> create route_desc                               : {create_binding, '$2'}.
+expression -> create route_desc                               : {create_binding, '$2', ""}.
 expression -> drop route_desc                                 : {drop_binding, '$2'}.
 expression -> create user string identified by string         : {create_user, unwrap('$3'), unwrap('$6')}.
 expression -> drop user string                                : {drop_user, unwrap('$3')}.
