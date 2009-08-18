@@ -39,7 +39,7 @@
 -define(QueueName, <<"bql.query">>).
 
 start_link() ->
-  gen_server:start_link(?MODULE, [], []).
+    gen_server:start_link(?MODULE, [], []).
 
 init([]) ->
     Connection = lib_amqp:start_connection(),
@@ -103,11 +103,12 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 format_result(Result) ->
-  [format_result_entry(E) || E <- Result].
+    [format_result_entry(E) || E <- Result].
 
 format_result_entry(ok) ->
-  <<"ok">>;
+    <<"ok">>;
 format_result_entry({Headers, Rows}) ->
-  [{obj, [{atom_to_list(Header), list_to_binary(bql_utils:convert_to_string(Cell))} || {Header, Cell} <- lists:zip(Headers, Row)]} || Row <- Rows];
+    [{obj, [{atom_to_list(Header), list_to_binary(bql_utils:convert_to_string(Cell))} || 
+                {Header, Cell} <- lists:zip(Headers, Row)]} || Row <- Rows];
 format_result_entry(Msg) when is_list(Msg) ->
-  list_to_binary(Msg).
+    list_to_binary(Msg).

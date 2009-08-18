@@ -48,75 +48,74 @@ stop() ->
     ok.
 
 execute_shell() ->
-  case run_command() of
-    exit -> ok;
-    _    -> execute_shell()
-  end.
+    case run_command() of
+        exit -> ok;
+        _    -> execute_shell()
+    end.
 
 run_command() ->
-  Line = io:get_line("BQL> "),
-  case Line of
-    eof      -> exit;
-    "exit\n" -> exit;
-    _        -> execute_block(Line), ok
-  end.
+    Line = io:get_line("BQL> "),
+    case Line of
+        eof      -> exit;
+        "exit\n" -> exit;
+        _        -> execute_block(Line), ok
+    end.
       
 
 apply_bql_file(BQL) ->
-  case filelib:is_file(BQL) of
-    false ->
-      io:fwrite("Provided BQL file does not exist!~n"),
-      error;
-    true ->
-      {ok, Contents} = file:read_file(BQL),
-      execute_block(binary_to_list(Contents))
-  end.
+    case filelib:is_file(BQL) of
+        false ->
+            io:fwrite("Provided BQL file does not exist!~n"),
+            error;
+        true ->
+            {ok, Contents} = file:read_file(BQL),
+            execute_block(binary_to_list(Contents))
+    end.
 
 execute_block(Contents) ->
-  case rpc:call(localnode(rabbit), bql_server, send_command, [<<"guest">>, <<"guest">>, Contents]) of	
-%  case bql_server:send_command(<<"guest">>, <<"guest">>, Contents) of
-    {ok, Result}    -> format_result(Result);
-    {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
-  end.
+    case rpc:call(localnode(rabbit), bql_server, send_command, [<<"guest">>, <<"guest">>, Contents]) of	
+        {ok, Result}    -> format_result(Result);
+        {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
+    end.
 
 format_result(Result) ->
-  [format_result_block(Item) || Item <- Result],
-  ok.
+    [format_result_block(Item) || Item <- Result],
+    ok.
 
 format_result_block({Headers, Rows}) when is_list(Headers), is_list(Rows) ->
-  % Convert the content of all the rows to strings
-  StringifiedRows = [[bql_utils:convert_to_string(Cell) || Cell <- Row] || Row <- Rows],
+    %% Convert the content of all the rows to strings
+    StringifiedRows = [[bql_utils:convert_to_string(Cell) || Cell <- Row] || Row <- Rows],
 
-  % Work through the items and headers, and find the longest item
-  CountedHeaders = lists:zip(Headers, lists:seq(1, length(Headers))),
-  Widths = [measure_column(Header, Position, StringifiedRows) || {Header, Position} <- CountedHeaders],
+    %% Work through the items and headers, and find the longest item
+    CountedHeaders = lists:zip(Headers, lists:seq(1, length(Headers))),
+    Widths = [measure_column(Header, Position, StringifiedRows) || {Header, Position} <- CountedHeaders],
 
-  % Output the header then inside dividers
-  Divider = ["-" || _ <- lists:seq(1, lists:sum(Widths) + 3*length(Widths) + 1)] ++ "~n",
-  io:fwrite(Divider),
-  output_row([atom_to_list(H) || H <- Headers], Widths),
-  io:fwrite(Divider),
+    %% Output the header then inside dividers
+    Divider = ["-" || _ <- lists:seq(1, lists:sum(Widths) + 3*length(Widths) + 1)] ++ "~n",
+    io:fwrite(Divider),
+    output_row([atom_to_list(H) || H <- Headers], Widths),
+    io:fwrite(Divider),
 
-  [output_row(Row, Widths) || Row <- StringifiedRows],
-  io:fwrite("~n"),
-  ok;
+    [output_row(Row, Widths) || Row <- StringifiedRows],
+    io:fwrite("~n"),
+    ok;
 format_result_block(Result) ->
-  io:format("~p~n", [Result]),
-  ok.
+    io:format("~p~n", [Result]),
+    ok.
 
 measure_column(Header, Position, Items) ->
-  lists:max([length(X) || X <- [atom_to_list(Header)] ++ [lists:nth(Position, Row) || Row <- Items]]).
+    lists:max([length(X) || X <- [atom_to_list(Header)] ++ [lists:nth(Position, Row) || Row <- Items]]).
 output_row(Items, Widths) ->
-  WidthItems = lists:zip(Items, Widths),
-  [io:format("| ~s ", [widen(Item, Width)]) || {Item, Width} <- WidthItems],
-  io:fwrite("|~n").
+    WidthItems = lists:zip(Items, Widths),
+    [io:format("| ~s ", [widen(Item, Width)]) || {Item, Width} <- WidthItems],
+    io:fwrite("|~n").
 
 widen(Item, Width) ->
-  Extra = Width - length(Item),
-  case Extra of
-    0 -> Item;
-    _ -> Item ++ [" " || _ <- lists:seq(1, Extra)]
-  end.
+    Extra = Width - length(Item),
+    case Extra of
+        0 -> Item;
+        _ -> Item ++ [" " || _ <- lists:seq(1, Extra)]
+    end.
 
 localnode(Name) ->
     %% Imported from rabbit_misc to remove the dependency on the Rabbit server!

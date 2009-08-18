@@ -48,7 +48,7 @@ stop(Pid) ->
     gen_server:call(Pid, stop, infinity).
 
 call(RpcClientPid, Exchange, ContentType, Payload) ->
-  call(RpcClientPid, Exchange, ContentType, Payload, infinity).
+    call(RpcClientPid, Exchange, ContentType, Payload, infinity).
 call(RpcClientPid, Exchange, ContentType, Payload, Timeout) ->
     gen_server:call(RpcClientPid, {call, Exchange, ContentType, Payload}, Timeout).
 

@@ -29,25 +29,25 @@
 -include_lib("eunit/include/eunit.hrl").
 
 submit_create_command_test() ->
-  Response = send_request("create exchange myexchange;"),
-  ?assertEqual("{\"success\":true,\"messages\":[\"ok\"]}", Response).
+    Response = send_request("create exchange myexchange;"),
+    ?assertEqual("{\"success\":true,\"messages\":[\"ok\"]}", Response).
 
 submit_query_test() ->
-  Response = send_request("select * from vhosts where name='/';"),
-  ?assertEqual("{\"success\":true,\"messages\":[[{\"name\":\"/\"}]]}", Response).
+    Response = send_request("select * from vhosts where name='/';"),
+    ?assertEqual("{\"success\":true,\"messages\":[[{\"name\":\"/\"}]]}", Response).
 
 submit_badly_formatted_query_test() ->
-  Response = send_request("create invalidexchange myexchange;"),
-  ?assertEqual("{\"success\":false,\"message\":\"syntax error before: \\\"invalidexchange\\\" on line 1\"}", Response).
+    Response = send_request("create invalidexchange myexchange;"),
+    ?assertEqual("{\"success\":false,\"message\":\"syntax error before: \\\"invalidexchange\\\" on line 1\"}", Response).
 
 submit_query_against_non_existant_object_test() ->
-  Response = send_request("select * from something;"),
-  ?assertEqual("{\"success\":true,\"messages\":[\"Unknown entity something specified to query\"]}", Response).
+    Response = send_request("select * from something;"),
+    ?assertEqual("{\"success\":true,\"messages\":[\"Unknown entity something specified to query\"]}", Response).
 
 send_request(Content) ->
-  Connection = Connection = lib_amqp:start_connection(),
-  Client = bql_amqp_rpc_client:start(Connection, <<>>),
-  Res = bql_amqp_rpc_client:call(Client, <<"bql.query">>, <<"application/json">>,
-                                 list_to_binary("{\"query\":\"" ++ Content ++ "\"}"), 500),
-  lib_amqp:close_connection(Connection),
-  Res.
+    Connection = Connection = lib_amqp:start_connection(),
+    Client = bql_amqp_rpc_client:start(Connection, <<>>),
+    Res = bql_amqp_rpc_client:call(Client, <<"bql.query">>, <<"application/json">>,
+                                   list_to_binary("{\"query\":\"" ++ Content ++ "\"}"), 500),
+    lib_amqp:close_connection(Connection),
+    Res.

@@ -9,9 +9,9 @@ as an unparsed string (so that this works for thin clients as well)
      so that thin clients don't need to set this
 - Drop Erlang RPC as transport, just use AMQP to get commands in to BQL
 - Test case for draining queues
+- Add at least rudimentary support for security
 
 Refactoring:
-- Tab indent = 4
 - Some commands take the state of a server as the first argument, which
   is not very Erlangly
 

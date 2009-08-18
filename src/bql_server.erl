@@ -32,55 +32,55 @@
 -record(state, {}).
 
 start() ->
-  start_link(),
-  ok.
+    start_link(),
+    ok.
 
 start(normal, []) ->
-  start_link().
+    start_link().
 
 stop() ->
-  ok.
+    ok.
 
 stop(_State) ->
-  stop().
+    stop().
 
 start_link() ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 send_command(Username, Password, Command) ->
-  gen_server:call(?MODULE, {execute, Username, Password, Command}).
+    gen_server:call(?MODULE, {execute, Username, Password, Command}).
 
 %---------------------------
 % Gen Server Implementation
 % --------------------------
 
 init([]) ->
-  {ok, #state{}}.
+    {ok, #state{}}.
 
 handle_call(Msg,_From,State = #state{}) ->
-  case Msg of
-    {execute, _Username, _Password, Command} ->
-      % rabbit_access_control:user_pass_login(Username, Password),
+    case Msg of
+        {execute, _Username, _Password, Command} ->
+            %% rabbit_access_control:user_pass_login(Username, Password),
 
-      % rabbit_access_control:check_resource_access(Username, Resource, Perm)
-      % select name,depth from queues where name = 'amq.control'; => [{name, depth}, {"amq.control", 5}]
+            % rabbit_access_control:check_resource_access(Username, Resource, Perm)
+            % select name,depth from queues where name = 'amq.control'; => [{name, depth}, {"amq.control", 5}]
 
-     case commands:parse(Command) of
-        {ok, Commands} ->
-          case bql_applicator:apply_commands(Commands) of
-            {ok, Result} ->
-              {reply, {ok, Result}, State};
-            {error, Reason} ->
-              {reply, {error, Reason}, State}
-          end;
-        {error, Reason} ->
-            {reply, {error, Reason}, State}
-     end;
-    _ ->
-      {reply, unknown_command, State}
-  end. 
+            case commands:parse(Command) of
+                {ok, Commands} ->
+                    case bql_applicator:apply_commands(Commands) of
+                        {ok, Result} ->
+                            {reply, {ok, Result}, State};
+                        {error, Reason} ->
+                            {reply, {error, Reason}, State}
+                    end;
+                {error, Reason} ->
+                    {reply, {error, Reason}, State}
+            end;
+        _ ->
+            {reply, unknown_command, State}
+    end. 
 
-handle_cast(_,State) -> {reply,unhandled_cast,State}.
-handle_info(_Info, State) -> {reply, unhandled_info, State}.
+handle_cast(_,State) -> {noreply, State}.
+handle_info(_Info, State) -> {noreply, State}.
 terminate(_,_) -> ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
