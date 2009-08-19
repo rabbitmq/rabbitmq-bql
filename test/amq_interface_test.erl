@@ -24,8 +24,7 @@
 %%
 -module(amq_interface_test).
 
--include_lib("rabbit_common/include/rabbit.hrl").
--include_lib("rabbit_common/include/rabbit_framing.hrl").
+-include_lib("amqp_client/include/amqp_client.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 submit_create_command_test() ->

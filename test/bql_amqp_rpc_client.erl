@@ -25,8 +25,6 @@
 
 -module(bql_amqp_rpc_client).
 
--include_lib("rabbit_common/include/rabbit_framing.hrl").
--include_lib("rabbit_common/include/rabbit.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 -behaviour(gen_server).

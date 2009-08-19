@@ -30,8 +30,6 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -include_lib("amqp_client/include/amqp_client.hrl").
--include_lib("rabbit_common/include/rabbit.hrl").
--include_lib("rabbit_common/include/rabbit_framing.hrl").
 
 -record(state, { channel }).
 
@@ -45,7 +43,7 @@ init([]) ->
     Connection = lib_amqp:start_connection(),
     Ch = amqp_connection:open_channel(Connection),
     link(Ch),
-    
+
     _X = amqp_channel:call(Ch, #'exchange.declare'{exchange = ?ExchangeName, durable = true}),
     Q = lib_amqp:declare_queue(Ch, #'queue.declare'{queue = ?QueueName, durable = true}),
     _ConsumerTag = lib_amqp:subscribe(Ch, Q, self()),
