@@ -6,3 +6,7 @@ src/command_parser.erl
 dist
 tmp
 test_ebin
+
+syntax: regexp
+^build/
+^dist/
