@@ -40,14 +40,16 @@ start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
 init([]) ->
-    Connection = lib_amqp:start_connection(),
+    Connection = amqp_connection:start_direct(#amqp_params{}),
     Ch = amqp_connection:open_channel(Connection),
     link(Ch),
 
     _X = amqp_channel:call(Ch, #'exchange.declare'{exchange = ?ExchangeName, durable = true}),
-    Q = lib_amqp:declare_queue(Ch, #'queue.declare'{queue = ?QueueName, durable = true}),
-    _ConsumerTag = lib_amqp:subscribe(Ch, Q, self()),
-    #'queue.bind_ok'{} = lib_amqp:bind_queue(Ch, ?ExchangeName, Q, <<>>),
+    #'queue.declare_ok'{} = amqp_channel:call(Ch, #'queue.declare'{queue = ?QueueName, durable = true}),
+    _ConsumerTag = amqp_channel:subscribe(Ch, #'basic.consume'{queue = ?QueueName}, self()),
+    #'queue.bind_ok'{} = amqp_channel:call(Ch, #'queue.bind'{exchange = ?ExchangeName, 
+                                                             queue = ?QueueName, 
+                                                             routing_key = <<>>}),
 
     {ok, #state { channel = Ch } }.
 
@@ -79,12 +81,13 @@ handle_info({#'basic.deliver' { 'delivery_tag' = DeliveryTag },
       end,
 
       Properties = #'P_basic'{correlation_id = CorrelationId},
-      lib_amqp:publish(Ch, <<>>, Q, rfc4627:encode(ResponseObj), Properties)
+      amqp_channel:call(Ch, #'basic.publish'{exchange = <<>>, routing_key = Q}, 
+                        #amqp_msg{payload=rfc4627:encode(ResponseObj), props = Properties})
     catch
       Tag:Error -> io:fwrite("Caught error: ~p,~p,~p~n", [Tag, Error,
                               erlang:get_stacktrace()])
     end,
-    lib_amqp:ack(Ch, DeliveryTag),
+    ok = amqp_channel:cast(Ch, #'basic.ack'{delivery_tag = DeliveryTag}),
     {noreply, State};
 handle_info(shutdown, State) ->
     {stop, channel_shutdown, State};
@@ -93,7 +96,7 @@ handle_info(_Info, State) ->
 
 terminate(_Reason, #state { channel = Ch }) ->
     case is_process_alive(Ch) of
-        true -> lib_amqp:close_channel(Ch);
+        true -> amqp_channel:close(Ch);
         false -> ok
     end,
     ok.

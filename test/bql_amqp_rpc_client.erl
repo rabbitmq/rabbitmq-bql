@@ -56,13 +56,13 @@ call(RpcClientPid, Exchange, ContentType, Payload, Timeout) ->
 
 % Sets up a reply queue for this client to listen on
 setup_reply_queue(State = #rpc_client_state{channel = Channel}) ->
-    Q = lib_amqp:declare_private_queue(Channel),
+    #'queue.declare_ok'{queue = Q} = amqp_channel:call(Channel, #'queue.declare'{}),
     State#rpc_client_state{reply_queue = Q}.
 
 % Registers this RPC client instance as a consumer to handle rpc responses
 setup_consumer(#rpc_client_state{channel = Channel,
                                  reply_queue = Q}) ->
-    lib_amqp:subscribe(Channel, Q, self()).
+    amqp_channel:subscribe(Channel, #'basic.consume'{queue = Q}, self()).
 
 % Publishes to the broker, stores the From address against
 % the correlation id and increments the correlationid for
@@ -76,7 +76,8 @@ publish(Exchange, ContentType, Payload, From,
     Props = #'P_basic'{correlation_id = <<CorrelationId:64>>,
                        content_type = ContentType,
                        reply_to = Q},
-    lib_amqp:publish(Channel, Exchange, RoutingKey, Payload, Props),
+    amqp_channel:call(Channel, #'basic.publish'{exchange = Exchange, routing_key = RoutingKey},
+                      #amqp_msg{payload = Payload, props = Props}),
     State#rpc_client_state{correlation_id = CorrelationId + 1,
                            continuations
                            = dict:store(CorrelationId, From, Continuations)}.
@@ -87,7 +88,7 @@ publish(Exchange, ContentType, Payload, From,
 
 % Sets up a reply queue and consumer within an existing channel
 init([Connection, RoutingKey]) ->
-    Channel = lib_amqp:start_channel(Connection),
+    Channel = amqp_connection:open_channel(Connection),
     InitialState = #rpc_client_state{channel = Channel,
                                      exchange = <<>>,
                                      routing_key = RoutingKey},
@@ -97,7 +98,7 @@ init([Connection, RoutingKey]) ->
 
 % Closes the channel this gen_server instance started
 terminate(_Reason, #rpc_client_state{channel = Channel}) ->
-    lib_amqp:close_channel(Channel),
+    amqp_channel:close(Channel),
     ok.
 
 % Handle the application initiated stop by just stopping this gen server
