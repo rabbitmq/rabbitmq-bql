@@ -8,19 +8,15 @@
 %%   License for the specific language governing rights and limitations
 %%   under the License.
 %%
-%%   The Original Code is the RabbitMQ BQL Module.
+%%   The Original Code is RabbitMQ BQL Plugin.
 %%
-%%   The Initial Developers of the Original Code are LShift Ltd.,
-%%   Cohesive Financial Technologies LLC., and Rabbit Technologies Ltd.
+%%   The Initial Developers of the Original Code are LShift Ltd.
 %%
-%%   Portions created by LShift Ltd., Cohesive Financial
-%%   Technologies LLC., and Rabbit Technologies Ltd. are Copyright (C)
-%%   2009 LShift Ltd., Cohesive Financial Technologies LLC., and Rabbit
-%%   Technologies Ltd.;
+%%   Copyright (C) 2009 LShift Ltd.
 %%
 %%   All Rights Reserved.
 %%
-%%   Contributor(s): ___________________________
+%%   Contributor(s): ______________________________________.
 %%
 -module(bql_dump).
 

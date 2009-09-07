@@ -8,21 +8,16 @@
 %%   License for the specific language governing rights and limitations
 %%   under the License.
 %%
-%%   The Original Code is the RabbitMQ Erlang Client.
+%%   The Original Code is RabbitMQ BQL Plugin.
 %%
-%%   The Initial Developers of the Original Code are LShift Ltd.,
-%%   Cohesive Financial Technologies LLC., and Rabbit Technologies Ltd.
+%%   The Initial Developers of the Original Code are LShift Ltd.
 %%
-%%   Portions created by LShift Ltd., Cohesive Financial
-%%   Technologies LLC., and Rabbit Technologies Ltd. are Copyright (C)
-%%   2007 LShift Ltd., Cohesive Financial Technologies LLC., and Rabbit
-%%   Technologies Ltd.;
+%%   Copyright (C) 2009 LShift Ltd.
 %%
 %%   All Rights Reserved.
 %%
-%%   Contributor(s): Ben Hood <0x6e6562@gmail.com>.
+%%   Contributor(s): ______________________________________.
 %%
-
 -module(bql_amqp_rpc_client).
 
 -include_lib("amqp_client/include/amqp_client.hrl").
