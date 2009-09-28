@@ -25,6 +25,9 @@
 -export([start/0, start/2, stop/0, stop/1, start_link/0, send_command/4]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-include_lib("rabbit_common/include/rabbit.hrl").
+-include_lib("rabbit_common/include/rabbit_framing.hrl").
+
 -record(state, {}).
 
 start() ->
@@ -57,8 +60,8 @@ handle_call(Msg,_From,State = #state{}) ->
     case catch handle_message(Msg) of
         {reply, Content} ->
             {reply, Content, State};
-        {'EXIT', {amqp,access_refused,ErrorMsg,none}} ->
-            {reply, {error, ErrorMsg}, State};
+        {'EXIT', #amqp_error{name = access_refused, explanation = Expl}} ->
+            {reply, {error, Expl}, State};
         {'EXIT', Reason} ->
             {reply, {error, Reason}, State};
         Response ->
