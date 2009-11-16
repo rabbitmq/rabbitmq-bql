@@ -20,7 +20,7 @@
 %%
 -module(bql_utils).
 
--export([convert_to_string/1]).
+-export([convert_to_string/1, makenode/1]).
 
 convert_to_string(Value) when is_list(Value) ->
     Value;
