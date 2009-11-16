@@ -31,7 +31,7 @@
 
 apply_commands(Commands, User) ->
     % Create a connection to the Rabbit node
-    Node = rabbit_misc:localnode(rabbit),
+    Node = rabbit_misc:makenode("rabbit"),
 
     {ok, [catch apply_command(Command, #state {node = Node, user = User}) 
             || Command <- Commands]}.

@@ -73,8 +73,8 @@ stop() ->
     ok.
 
 execute_block(Contents, Formatter) ->
-    case rpc:call(localnode(rabbit), bql_server, send_command, [<<"guest">>,
-<<"guest">>, <<"text/bql">>, Contents]) of	
+    case rpc:call(bql_utils:makenode("rabbit"), bql_server, send_command,
+                  [<<"guest">>, <<"guest">>, <<"text/bql">>, Contents]) of	
         {ok, Result}    -> format(Result, Formatter);
         {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
     end.
@@ -90,11 +90,3 @@ format([{Headers, Rows}], Formatter) ->
     Zipped = [lists:zip(Headers, Row) || Row <- Rows],
     Formatted = [Formatter(Row) || Row <- Zipped],
     lists:flatten(string:join([F || F <- Formatted, not(length(F) == 0)], "\n")).
-
-localnode(Name) ->
-    %% Imported from rabbit_misc to remove the dependency on the Rabbit server!
-    %% This is horrible, but there doesn't seem to be a way to split a
-    %% nodename into its constituent parts.
-    list_to_atom(lists:append(atom_to_list(Name),
-                              lists:dropwhile(fun (E) -> E =/= $@ end,
-                                              atom_to_list(node())))).
