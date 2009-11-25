@@ -20,7 +20,7 @@
 %%
 -module(bql_utils).
 
--export([convert_to_string/1]).
+-export([convert_to_string/1, makenode/1]).
 
 convert_to_string(Value) when is_list(Value) ->
     Value;
@@ -28,3 +28,18 @@ convert_to_string(Value) when is_binary(Value) ->
     binary_to_list(Value);
 convert_to_string(Value) ->
     io_lib:write(Value).
+
+%% Imported from rabbit_misc to remove the dependency on the Rabbit server!
+makenode({Prefix, Suffix}) ->
+    list_to_atom(lists:append([Prefix, "@", Suffix]));
+makenode(NodeStr) ->
+    makenode(nodeparts(NodeStr)).
+
+nodeparts(Node) when is_atom(Node) ->
+    nodeparts(atom_to_list(Node));
+nodeparts(NodeStr) ->
+    case lists:splitwith(fun (E) -> E =/= $@ end, NodeStr) of
+        {Prefix, []}     -> {_, Suffix} = nodeparts(node()),
+                            {Prefix, Suffix};
+        {Prefix, Suffix} -> {Prefix, tl(Suffix)}
+    end.
