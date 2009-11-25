@@ -41,8 +41,8 @@ submit_query_against_non_existant_object_test() ->
 
 send_request(Content) ->
     Connection = Connection = amqp_connection:start_direct(#amqp_params{}),
-    Client = bql_amqp_rpc_client:start(Connection, <<>>),
-    Res = bql_amqp_rpc_client:call(Client, <<"bql.query">>, <<"application/json">>,
+    Client = bql_amqp_rpc_client:start(Connection, <<"bql.query">>),
+    Res = bql_amqp_rpc_client:call(Client, <<"application/json">>,
                                    list_to_binary("{\"query\":\"" ++ Content ++ "\"}"), 500),
     amqp_connection:close(Connection),
     Res.
