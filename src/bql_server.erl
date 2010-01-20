@@ -22,7 +22,7 @@
 
 -behaviour(gen_server).
 
--export([start/0, start/2, stop/0, stop/1, start_link/0, send_command/4]).
+-export([start/0, start/2, stop/0, stop/1, start_link/0, send_command/5]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -include_lib("rabbit_common/include/rabbit.hrl").
@@ -46,8 +46,8 @@ stop(_State) ->
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-send_command(Username, Password, ContentType, Command) ->
-    gen_server:call(?MODULE, {execute, Username, Password, ContentType, Command}).
+send_command(Username, Password, VHost, ContentType, Command) ->
+    gen_server:call(?MODULE, {execute, Username, Password, VHost, ContentType, Command}).
 
 %---------------------------
 % Gen Server Implementation
@@ -81,7 +81,7 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %% Message Handling
-handle_message({execute, Username, Password, ContentType, Command}) ->
+handle_message({execute, Username, Password, VHost, ContentType, Command}) ->
     %% Validate the user credentials
     rabbit_access_control:user_pass_login(Username, Password),
     
@@ -97,7 +97,7 @@ handle_message({execute, Username, Password, ContentType, Command}) ->
     
     case ParsedCommands of
         {ok, Commands} ->
-            case bql_applicator:apply_commands(Commands, Username) of
+            case bql_applicator:apply_commands(Commands, Username, VHost) of
                 {ok, Result} ->
                     {reply, {ok, Result}};
                 {error, Reason} ->
