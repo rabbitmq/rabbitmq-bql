@@ -63,7 +63,7 @@ handle_info({#'basic.deliver' { 'delivery_tag' = DeliveryTag },
         {ok, RequestObj, _Rest} ->
           case rfc4627:get_field(RequestObj, "query") of 
             {ok, Query} ->
-              case bql_server:send_command(<<"guest">>, <<"guest">>, <<"text/bql">>, binary_to_list(Query)) of
+              case bql_server:send_command(<<"guest">>, <<"guest">>, <<"/">>, <<"text/bql">>, binary_to_list(Query)) of
                 {ok, Result} ->
                   {obj, [{"success", true}, {"messages", format_result(Result)}]};
                 {error, Reason} ->

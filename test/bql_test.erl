@@ -161,11 +161,11 @@ select_exchange_with_raw_test() ->
     ?assertEqual([{[name], [["amq.topic"]]}], Result).
 
 execute(Command) ->
-    {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, <<"text/bql">>, Command),
+    {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, <<"/">>, <<"text/bql">>, Command),
     Result.
     
 execute_raw(Terms) ->
     Formatted = lists:flatten(io_lib:format("~p", [Terms])),
-    {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, <<"application/bql-terms">>,
+    {ok, Result} = bql_server:send_command(<<"guest">>, <<"guest">>, <<"/">>, <<"application/bql-terms">>,
                                            Formatted),
     Result.
