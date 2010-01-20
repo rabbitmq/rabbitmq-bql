@@ -29,4 +29,4 @@ exec $RLWRAP erl \
     -hidden \
     -sname amqpbql$$ \
     -s bql_client \
-    -extra "$@"
+    $@

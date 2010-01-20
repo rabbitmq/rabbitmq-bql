@@ -42,7 +42,7 @@ init([]) ->
 
     _X = amqp_channel:call(Ch, #'exchange.declare'{exchange = ?ExchangeName, durable = true}),
     #'queue.declare_ok'{} = amqp_channel:call(Ch, #'queue.declare'{queue = ?QueueName, durable = true}),
-    _ConsumerTag = amqp_channel:subscribe(Ch, #'basic.consume'{queue = ?QueueName}, self()),
+    _ConsumerTag = amqp_channel:call(Ch, #'basic.consume'{queue = ?QueueName}),
     #'queue.bind_ok'{} = amqp_channel:call(Ch, #'queue.bind'{exchange = ?ExchangeName, 
                                                              queue = ?QueueName, 
                                                              routing_key = <<>>}),
