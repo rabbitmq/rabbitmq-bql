@@ -20,12 +20,23 @@
 %%
 -module(bql_client).
 
--export([connect/5, close/1, execute/2]).
+-export([connect/0, connect/5, close/1, execute/2]).
 
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 % Record defining the context in which BQL commands are executed
 -record(client_ctx, {username, password, vhost, connection, rpc_client}).
+
+%% Creates a connection to the Rabbit server that can subsequently be used
+%% to issue BQL requests. Uses init arguments to determine connection
+%% parameters.
+connect() ->
+  Username = list_to_binary(bql_utils:argument_or_default(username, "guest")),
+  Password = list_to_binary(bql_utils:argument_or_default(password, "guest")),
+  VHost = list_to_binary(bql_utils:argument_or_default(vhost, "/")),
+  Host = bql_utils:argument_or_default(host, "localhost"),
+  Port = bql_utils:argument_or_default(port, ?PROTOCOL_PORT),
+  connect(Host, Port, Username, Password, VHost).
 
 %% Creates a connection to the Rabbit server that can subsequently be used
 %% to issue BQL requests.

@@ -30,12 +30,7 @@
 -record(client_ctx, {username, password, vhost}).
 
 start() ->
-    Username = list_to_binary(argument_or_default(username, "guest")),
-    Password = list_to_binary(argument_or_default(password, "guest")),
-    VHost = list_to_binary(argument_or_default(vhost, "/")),
-	  Host = argument_or_default(host, "localhost"),
-	  Port = argument_or_default(port, ?PROTOCOL_PORT),
-    Client = bql_client:connect(Host, Port, Username, Password, VHost),
+    Client = bql_client:connect(),
 
     case init:get_argument(execute) of
       error ->
@@ -53,12 +48,6 @@ start() ->
 
 stop() ->
     ok.
-
-argument_or_default(Flag, Default) ->
-  case init:get_argument(Flag) of
-    {ok, [[Val]]} -> Val;
-    _ -> Default
-  end.
 
 execute_shell(Client) ->
     case run_command(Client) of
