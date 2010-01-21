@@ -40,13 +40,8 @@ init([]) ->
     Ch = amqp_connection:open_channel(Connection),
     link(Ch),
 
-    _X = amqp_channel:call(Ch, #'exchange.declare'{exchange = ?ExchangeName, durable = true}),
     #'queue.declare_ok'{} = amqp_channel:call(Ch, #'queue.declare'{queue = ?QueueName, durable = true}),
     _ConsumerTag = amqp_channel:call(Ch, #'basic.consume'{queue = ?QueueName}),
-    #'queue.bind_ok'{} = amqp_channel:call(Ch, #'queue.bind'{exchange = ?ExchangeName, 
-                                                             queue = ?QueueName, 
-                                                             routing_key = <<>>}),
-
     {ok, #state { channel = Ch } }.
 
 handle_call(_,_,State) -> {reply,unhandled_call,State}.
