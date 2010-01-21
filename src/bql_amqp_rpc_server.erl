@@ -57,28 +57,18 @@ handle_info(#'basic.consume_ok'{}, State) ->
 handle_info({#'basic.deliver' { 'delivery_tag' = DeliveryTag },
              #amqp_msg{props = Props, payload = Payload }},
             State = #state { channel = Ch }) ->
-    #'P_basic'{correlation_id = CorrelationId, reply_to = Q} = Props,
+    #'P_basic'{correlation_id = CorrelationId, reply_to = Q, content_type = ContentType} = Props,
     try
-      ResponseObj = case rfc4627:decode(Payload) of
-        {ok, RequestObj, _Rest} ->
-          case rfc4627:get_field(RequestObj, "query") of 
-            {ok, Query} ->
-              case bql_server:send_command(<<"guest">>, <<"guest">>, <<"/">>, <<"text/bql">>, binary_to_list(Query)) of
-                {ok, Result} ->
-                  {obj, [{"success", true}, {"messages", format_result(Result)}]};
-                {error, Reason} ->
-                  {obj, [{"success", false}, {"message", list_to_binary(Reason)}]}
-              end;
-            _ ->
-              {obj, [{"success", false}, {"message", <<"Invalid request - no query attribute">>}]}
-          end;
-        {error, _Reason} ->
-          {obj, [{"success", false}, {"message", <<"Invalid JSON in Query">>}]}
+      Result = case decode_request(ContentType, Payload) of
+        {ok, User, Password, VHost, Query} ->
+          bql_server:send_command(User, Password, VHost, <<"text/bql">>, Query);
+        {error, Reason} -> {error, Reason}
       end,
-
+      Response = encode_result(ContentType, Result),
+      
       Properties = #'P_basic'{correlation_id = CorrelationId},
       amqp_channel:call(Ch, #'basic.publish'{exchange = <<>>, routing_key = Q}, 
-                        #amqp_msg{payload=rfc4627:encode(ResponseObj), props = Properties})
+                        #amqp_msg{payload = Response, props = Properties})
     catch
       Tag:Error -> io:fwrite("Caught error: ~p,~p,~p~n", [Tag, Error,
                               erlang:get_stacktrace()])
@@ -99,6 +89,48 @@ terminate(_Reason, #state { channel = Ch }) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+decode_request(<<"application/json">>, Payload) ->
+	case rfc4627:decode(Payload) of
+    {ok, RequestObj, _Rest} ->
+      case rfc4627:get_field(RequestObj, "query") of 
+        {ok, Query} ->
+			    {ok, 
+			      get_field_or_default(RequestObj, "user", <<"guest">>), 
+			      get_field_or_default(RequestObj, "password", <<"guest">>), 
+			      get_field_or_default(RequestObj, "vhost", <<"/">>), 
+			      binary_to_list(Query)};
+        _ ->
+          {error, <<"Invalid request - no query attribute">>}
+      end;
+    {error, _Reason} ->
+      {error, <<"Invalid JSON in Query">>}
+  end;
+decode_request(<<"application/bert">>, Payload) ->
+  Request = binary_to_term(Payload),
+  {ok, 
+    proplists:get_value(user, Request, <<"guest">>),
+    proplists:get_value(password, Request, <<"guest">>),
+    proplists:get_value(vhost, Request, <<"/">>),
+    proplists:get_value(query_text, Request, "")}.
+  
+encode_result(<<"application/json">>, Result) ->
+  ResponseObj = case Result of
+    {ok, ResultEls} ->
+      {obj, [{"success", true}, {"messages", format_result(ResultEls)}]};
+    {error, Reason} ->
+      {obj, [{"success", false}, {"message", list_to_binary(Reason)}]}
+  end,
+  
+  list_to_binary(rfc4627:encode(ResponseObj));
+encode_result(<<"application/bert">>, Result) ->
+  term_to_binary(Result).
+
+get_field_or_default(Obj, Name, Default) ->
+  case rfc4627:get_field(Obj, Name) of 
+    {ok, Val} -> Val;
+    _ -> Default
+  end.
 
 format_result(Result) ->
     [format_result_entry(E) || E <- Result].

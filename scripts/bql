@@ -25,8 +25,11 @@ RLWRAP=`which rlwrap`
 
 exec $RLWRAP erl \
     -pa "`dirname $0`/../ebin" \
+    -pa "`dirname $0`/../build/deps/amqp_client/ebin" \
+    -pa "`dirname $0`/../build/deps/rabbit_common/ebin" \
+    -pa "`dirname $0`/../build/deps/rfc4627_jsonrpc/ebin" \
     -noshell \
     -hidden \
     -sname amqpbql$$ \
-    -s bql_client \
+    -s bql_shell \
     $@
