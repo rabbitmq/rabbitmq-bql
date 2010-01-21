@@ -32,7 +32,7 @@ $(DIST_DIR)/$(CLIENT_PACKAGE): $(TARGETS) $(wildcard $(SCRIPTS_DIR))
 	(cd $(CLIENT_PACKAGE_DIR); zip -r ../../$@ *)
 	
 run_client: $(DIST_DIR)/$(CLIENT_PACKAGE)
-	(cd $(CLIENT_PACKAGE_DIR); ./bql)
+	(cd $(CLIENT_PACKAGE_DIR); ./bql $(CLIENT_ARGS))
 	
 run_dump: $(DIST_DIR)/$(CLIENT_PACKAGE)
 	(cd $(CLIENT_PACKAGE_DIR); ./bql_dump)
