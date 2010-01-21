@@ -24,53 +24,66 @@
 
 -export([start/0, stop/0]).
 
+% Record defining the context in which BQL commands are executed
+-record(client_ctx, {username, password, vhost}).
+
 start() ->
-    FullCommand = init:get_plain_arguments(),
-    case FullCommand of
-      [] ->
-         execute_shell(),
+    Username = list_to_binary(argument_or_default(username, "guest")),
+    Password = list_to_binary(argument_or_default(password, "guest")),
+    VHost = list_to_binary(argument_or_default(vhost, "/")),
+    ClientContext = #client_ctx{username = Username, password = Password, vhost = VHost},
+
+    case init:get_argument(execute) of
+      error ->
+         execute_shell(ClientContext),
          halt();
-      [BQL] ->
-         case apply_bql_file(BQL) of
+      {ok, BQL} ->
+         case apply_bql_file(ClientContext, BQL) of
            ok    -> halt();
            error -> halt(1)
          end;
       _ ->
-         io:fwrite("Too many arguments supplied. Provide a BDL file that should be applied.~n"),
+         io:fwrite("Too many arguments supplied. Provide a BQL file that should be applied.~n"),
          halt()
     end.
 
 stop() ->
     ok.
 
-execute_shell() ->
-    case run_command() of
+argument_or_default(Flag, Default) ->
+  case init:get_argument(Flag) of
+    {ok, [[Val]]} -> Val;
+    _ -> Default
+  end.
+
+execute_shell(ClientContext) ->
+    case run_command(ClientContext) of
         exit -> ok;
-        _    -> execute_shell()
+        _    -> execute_shell(ClientContext)
     end.
 
-run_command() ->
+run_command(ClientContext) ->
     Line = io:get_line("BQL> "),
     case Line of
         eof      -> exit;
         "exit\n" -> exit;
-        _        -> execute_block(Line), ok
+        _        -> execute_block(ClientContext, Line), ok
     end.
       
 
-apply_bql_file(BQL) ->
+apply_bql_file(ClientContext, BQL) ->
     case filelib:is_file(BQL) of
         false ->
             io:fwrite("Provided BQL file does not exist!~n"),
             error;
         true ->
             {ok, Contents} = file:read_file(BQL),
-            execute_block(binary_to_list(Contents))
+            execute_block(ClientContext, binary_to_list(Contents))
     end.
 
-execute_block(Contents) ->
+execute_block(#client_ctx { username = User, password = Password, vhost = VHost }, Contents) ->
     case rpc:call(bql_utils:makenode("rabbit"), bql_server, send_command, 
-                    [<<"guest">>, <<"guest">>, <<"text/bql">>, Contents]) of	
+                    [User, Password, VHost, <<"text/bql">>, Contents]) of	
         {ok, Result}    -> format_result(Result);
         {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
     end.

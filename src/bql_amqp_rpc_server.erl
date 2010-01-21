@@ -42,7 +42,7 @@ init([]) ->
 
     _X = amqp_channel:call(Ch, #'exchange.declare'{exchange = ?ExchangeName, durable = true}),
     #'queue.declare_ok'{} = amqp_channel:call(Ch, #'queue.declare'{queue = ?QueueName, durable = true}),
-    _ConsumerTag = amqp_channel:subscribe(Ch, #'basic.consume'{queue = ?QueueName}, self()),
+    _ConsumerTag = amqp_channel:call(Ch, #'basic.consume'{queue = ?QueueName}),
     #'queue.bind_ok'{} = amqp_channel:call(Ch, #'queue.bind'{exchange = ?ExchangeName, 
                                                              queue = ?QueueName, 
                                                              routing_key = <<>>}),
@@ -63,7 +63,7 @@ handle_info({#'basic.deliver' { 'delivery_tag' = DeliveryTag },
         {ok, RequestObj, _Rest} ->
           case rfc4627:get_field(RequestObj, "query") of 
             {ok, Query} ->
-              case bql_server:send_command(<<"guest">>, <<"guest">>, <<"text/bql">>, binary_to_list(Query)) of
+              case bql_server:send_command(<<"guest">>, <<"guest">>, <<"/">>, <<"text/bql">>, binary_to_list(Query)) of
                 {ok, Result} ->
                   {obj, [{"success", true}, {"messages", format_result(Result)}]};
                 {error, Reason} ->
