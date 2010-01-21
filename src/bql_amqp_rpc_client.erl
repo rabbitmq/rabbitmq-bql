@@ -85,7 +85,7 @@ call(RpcClient, ContentType, Payload, Timeout) ->
 %% Sets up a reply queue for this client to listen on
 setup_reply_queue(State = #rpc_c_state{channel = Channel}) ->
     #'queue.declare_ok'{queue = Q} =
-        amqp_channel:call(Channel, #'queue.declare'{auto_delete = true}),
+        amqp_channel:call(Channel, #'queue.declare'{exclusive = true}),
     State#rpc_c_state{reply_queue = Q}.
 
 %% Registers this RPC client instance as a consumer to handle rpc responses
