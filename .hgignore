@@ -3,3 +3,10 @@ ebin/*.beam
 src/command_lexer.erl
 src/command_parser.erl
 *.dump
+dist
+tmp
+test_ebin
+
+syntax: regexp
+^build/
+^dist/

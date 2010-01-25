@@ -8,45 +8,42 @@
 %%   License for the specific language governing rights and limitations
 %%   under the License.
 %%
-%%   The Original Code is the RabbitMQ Erlang Client.
+%%   The Original Code is RabbitMQ BQL Plugin.
 %%
-%%   The Initial Developers of the Original Code are LShift Ltd.,
-%%   Cohesive Financial Technologies LLC., and Rabbit Technologies Ltd.
+%%   The Initial Developers of the Original Code are LShift Ltd.
 %%
-%%   Portions created by LShift Ltd., Cohesive Financial
-%%   Technologies LLC., and Rabbit Technologies Ltd. are Copyright (C)
-%%   2009 LShift Ltd., Cohesive Financial Technologies LLC., and Rabbit
-%%   Technologies Ltd.;
+%%   Copyright (C) 2009 LShift Ltd.
 %%
 %%   All Rights Reserved.
 %%
-%%   Contributor(s): ___________________________
+%%   Contributor(s): ______________________________________.
 %%
 Nonterminals 
-statements statement expression route_desc field_desc field_list modifiers where_clause orderby_clause predicate predicates.
+statements expression route_desc field_desc field_list modifiers where_clause orderby_clause predicate predicates
+orderby_predicates orderby_predicate.
 
 Terminals
 create drop durable queue exchange exchange_type route from to routing_key is when_sym string select wildcard
-comma where comparator union order by asc desc user identified vhost grant revoke on purge semi.
+comma where comparator union order by asc desc user identified vhost grant revoke on purge post with get semi
+drain.
 
 Rootsymbol statements.
 
-statements -> statement            : ['$1'].
-statements -> statement statements : ['$1'] ++ '$2'.
-
-statement -> expression semi       : '$1'.
+statements -> expression                 : ['$1'].
+statements -> expression semi            : ['$1'].
+statements -> expression semi statements : ['$1'] ++ '$3'.
 
 expression -> create vhost string                             : {create_vhost, unwrap('$3')}.
 expression -> drop vhost string                               : {drop_vhost, unwrap('$3')}.
-expression -> create queue string                             : {create_queue, unwrap('$3'), false}.
-expression -> create durable queue string                     : {create_queue, unwrap('$4'), true}.
+expression -> create queue string                             : {create_queue, unwrap('$3'), false, ""}.
+expression -> create durable queue string                     : {create_queue, unwrap('$4'), true, ""}.
 expression -> drop queue string                               : {drop_queue, unwrap('$3')}.
-expression -> create exchange string                          : {create_exchange, unwrap('$3'), direct, false}.
-expression -> create durable exchange string                  : {create_exchange, unwrap('$4'), direct, true}.
-expression -> create exchange_type exchange string            : {create_exchange, unwrap('$4'), unwrap('$2'), false}.
-expression -> create durable exchange_type exchange string    : {create_exchange, unwrap('$5'), unwrap('$3'), true}.
+expression -> create exchange string                          : {create_exchange, unwrap('$3'), direct, false, ""}.
+expression -> create durable exchange string                  : {create_exchange, unwrap('$4'), direct, true, ""}.
+expression -> create exchange_type exchange string            : {create_exchange, unwrap('$4'), unwrap('$2'), false, ""}.
+expression -> create durable exchange_type exchange string    : {create_exchange, unwrap('$5'), unwrap('$3'), true, ""}.
 expression -> drop exchange string                            : {drop_exchange, unwrap('$3')}.
-expression -> create route_desc                               : {create_binding, '$2'}.
+expression -> create route_desc                               : {create_binding, '$2', ""}.
 expression -> drop route_desc                                 : {drop_binding, '$2'}.
 expression -> create user string identified by string         : {create_user, unwrap('$3'), unwrap('$6')}.
 expression -> drop user string                                : {drop_user, unwrap('$3')}.
@@ -55,6 +52,10 @@ expression -> select field_desc from string modifiers         : {select, unwrap(
 expression -> grant string on string to string                : {grant, list_to_atom(unwrap('$2')), unwrap('$4'), unwrap('$6')}.
 expression -> revoke string from string                       : {revoke, list_to_atom(unwrap('$2')), unwrap('$4')}.
 expression -> purge queue string                              : {purge_queue, unwrap('$3')}.
+expression -> post string to string                           : {post_message, unwrap('$4'), "", unwrap('$2')}.
+expression -> post string to string with routing_key string   : {post_message, unwrap('$4'), unwrap('$7'), unwrap('$2')}.
+expression -> get from string                                 : {retrieve_message, unwrap('$3')}.
+expression -> drain string                                    : {drain_queue, unwrap('$2')}.
 
 route_desc -> route from string to string                                 : {unwrap('$3'), unwrap('$5'), ""}.
 route_desc -> route from string to string when_sym routing_key is string  : {unwrap('$3'), unwrap('$5'), unwrap('$9')}.
@@ -75,9 +76,14 @@ predicates -> predicate union predicate                       : {unwrap('$2'), '
 
 predicate -> string comparator string                         : {comp_to_atom(unwrap('$2')), list_to_atom(unwrap('$1')), unwrap('$3')}.
 
-orderby_clause -> order by string                             : {order_by, list_to_atom(unwrap('$3')), ascending}.
-orderby_clause -> order by string asc                         : {order_by, list_to_atom(unwrap('$3')), ascending}.
-orderby_clause -> order by string desc                        : {order_by, list_to_atom(unwrap('$3')), descending}.
+orderby_clause -> order by orderby_predicates                    : {order_by, '$3'}.
+
+orderby_predicates -> orderby_predicate                          : ['$1'].
+orderby_predicates -> orderby_predicate comma orderby_predicates : ['$1'] ++ '$3'.
+
+orderby_predicate -> string                                   : {list_to_atom(unwrap('$1')), ascending}.
+orderby_predicate -> string asc                               : {list_to_atom(unwrap('$1')), ascending}.
+orderby_predicate -> string desc                              : {list_to_atom(unwrap('$1')), descending}.
 
 Erlang code.
 

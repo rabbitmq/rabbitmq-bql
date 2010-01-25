@@ -8,26 +8,22 @@
 %%   License for the specific language governing rights and limitations
 %%   under the License.
 %%
-%%   The Original Code is the RabbitMQ Erlang Client.
+%%   The Original Code is RabbitMQ BQL Plugin.
 %%
-%%   The Initial Developers of the Original Code are LShift Ltd.,
-%%   Cohesive Financial Technologies LLC., and Rabbit Technologies Ltd.
+%%   The Initial Developers of the Original Code are LShift Ltd.
 %%
-%%   Portions created by LShift Ltd., Cohesive Financial
-%%   Technologies LLC., and Rabbit Technologies Ltd. are Copyright (C)
-%%   2009 LShift Ltd., Cohesive Financial Technologies LLC., and Rabbit
-%%   Technologies Ltd.;
+%%   Copyright (C) 2009 LShift Ltd.
 %%
 %%   All Rights Reserved.
 %%
-%%   Contributor(s): ___________________________
+%%   Contributor(s): ______________________________________.
 %%
 % Lexes a selector
 
 Definitions.
 
 C     = [0-9A-Za-z\.\-\_]
-W     = [0-9A-Za-z\s\.\-\_%\/*]
+W     = [0-9A-Za-z\s\.\-\_%\/*#@]
 Semi  = [;]
 Wild  = [*]
 Comma = [,]
@@ -45,6 +41,7 @@ exchange    :   {token,{exchange,TokenLine,list_to_atom(TokenChars)}}.
 direct      :   {token,{exchange_type,TokenLine,list_to_atom(TokenChars)}}.
 headers     :   {token,{exchange_type,TokenLine,list_to_atom(TokenChars)}}.
 fanout      :   {token,{exchange_type,TokenLine,list_to_atom(TokenChars)}}.
+topic       :   {token,{exchange_type,TokenLine,list_to_atom(TokenChars)}}.
 route       :   {token,{route,TokenLine,list_to_atom(TokenChars)}}.
 from        :   {token,{from,TokenLine,list_to_atom(TokenChars)}}.
 to          :   {token,{to,TokenLine,list_to_atom(TokenChars)}}.
@@ -66,11 +63,15 @@ desc        :   {token,{desc,TokenLine,list_to_atom(TokenChars)}}.
 grant       :   {token,{grant,TokenLine,list_to_atom(TokenChars)}}.
 revoke      :   {token,{revoke,TokenLine,list_to_atom(TokenChars)}}.
 purge       :   {token,{purge,TokenLine,list_to_atom(TokenChars)}}.
+post        :   {token,{post,TokenLine,list_to_atom(TokenChars)}}.
+with        :   {token,{with,TokenLine,list_to_atom(TokenChars)}}.
+get         :   {token,{get,TokenLine,list_to_atom(TokenChars)}}.
+drain       :   {token,{drain,TokenLine,list_to_atom(TokenChars)}}.
 {Wild}      :   {token,{wildcard,TokenLine,list_to_atom(TokenChars)}}.
 {Comma}     :   {token,{comma,TokenLine,list_to_atom(TokenChars)}}.
 {Comp}      :   {token,{comparator,TokenLine,list_to_atom(TokenChars)}}.
 like        :   {token,{comparator,TokenLine,list_to_atom(TokenChars)}}.
-'{W}+'      :   {token,{string,TokenLine,strip(TokenChars, TokenLen)}}.
+'{W}*'      :   {token,{string,TokenLine,strip(TokenChars, TokenLen)}}.
 {C}+        :   {token,{string,TokenLine,TokenChars}}.
 {Semi}      :   {token,{semi,TokenLine,list_to_atom(TokenChars)}}.
 {WS}+       :   skip_token.

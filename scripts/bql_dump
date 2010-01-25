@@ -20,13 +20,10 @@
 ##   Contributor(s): ______________________________________.
 ##
 
-CURDIR=`dirname $0`
-RLWRAP=`which rlwrap`
-
-exec $RLWRAP erl \
+exec erl \
     -pa "`dirname $0`/../ebin" \
     -noshell \
     -hidden \
     -sname amqpbql$$ \
-    -s bql_client \
-    $@
+    -s bql_dump \
+    -extra "$@"
