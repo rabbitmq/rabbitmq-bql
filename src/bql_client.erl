@@ -43,14 +43,14 @@ connect() ->
 connect(Host, Port, Username, Password, VHost) ->
 	% Open a conenction and wire a RPC client to it
 	Connection = amqp_connection:start_network(#amqp_params{
-		  username     = Username,
-	    password     = Password,
-	    virtual_host = <<"/">>,  %% bql.query is in the default vhost
-	    host         = Host,
-	    port         = Port}),
-	Client = bql_amqp_rpc_client:start(Connection, <<"bql.query">>),
-	#client_ctx{username = Username, password = Password, vhost = VHost,
-				connection = Connection, rpc_client = Client}.
+        username     = Username,
+        password     = Password,
+        virtual_host = <<"/">>,  %% bql.query is in the default vhost
+        host         = Host,
+        port         = Port}),
+    Client = bql_amqp_rpc_client:start(Connection, <<"bql.query">>),
+    #client_ctx{username = Username, password = Password, vhost = VHost,
+	            connection = Connection, rpc_client = Client}.
 				
 %% Disconnects the BQL client and frees up any resources associated with it
 close(#client_ctx { connection = Connection, rpc_client = Client }) ->
