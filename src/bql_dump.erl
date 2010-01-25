@@ -29,7 +29,9 @@
 -define(ReservedQueues, ["bql.query"]).
 
 start() ->
-    Exchanges = execute_block("select * from exchanges order by name;",
+    Client = bql_client:connect(),
+  
+    Exchanges = execute_block(Client, "select * from exchanges order by name;",
                               fun(Ex) ->
                                 {value, {_, ExchangeType}} = lists:keysearch(type, 1, Ex),
                                 Durable = durable_str(Ex),
@@ -40,7 +42,7 @@ start() ->
                                   false -> io_lib:format("create ~s~p exchange '~s';", [Durable, ExchangeType, Name])
                                 end
                               end),
-    Queues = execute_block("select * from queues order by name;",
+    Queues = execute_block(Client, "select * from queues order by name;",
                            fun(Q) ->
                              Durable = durable_str(Q),
                              {value, {_, Name}} = lists:keysearch(name, 1, Q),
@@ -50,7 +52,7 @@ start() ->
                                false -> io_lib:format("create ~squeue '~s';", [Durable, Name])
                              end
                            end),
-    Bindings = execute_block("select * from bindings order by exchange_name, queue_name, 'routing_key';",
+    Bindings = execute_block(Client, "select * from bindings order by exchange_name, queue_name, 'routing_key';",
                              fun(B) ->
                                {value, {_, X}} = lists:keysearch(exchange_name, 1, B),
                                {value, {_, Q}} = lists:keysearch(queue_name, 1, B),
@@ -67,14 +69,15 @@ start() ->
                              end),
 
     io:format("~s~n", [string:join([Exchanges, Queues, Bindings], "\n")]),
+    bql_client:close(Client),
+    
     init:stop().
 
 stop() ->
     ok.
 
-execute_block(Contents, Formatter) ->
-    case rpc:call(bql_utils:makenode("rabbit"), bql_server, send_command,
-                  [<<"guest">>, <<"guest">>, <<"text/bql">>, Contents]) of	
+execute_block(Client, Contents, Formatter) ->
+    case bql_client:execute(Client, Contents) of	
         {ok, Result}    -> format(Result, Formatter);
         {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
     end.

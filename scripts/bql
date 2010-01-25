@@ -24,9 +24,10 @@ CURDIR=`dirname $0`
 RLWRAP=`which rlwrap`
 
 exec $RLWRAP erl \
-    -pa "`dirname $0`/../ebin" \
+    -pa "`dirname $0`/ebin" \
+    -kernel error_logger silent \
     -noshell \
     -hidden \
     -sname amqpbql$$ \
-    -s bql_client \
+    -s bql_shell \
     $@
