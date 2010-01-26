@@ -104,6 +104,7 @@ apply_command({drop_user, Name}, #state {user = Username, node = Node}) ->
 apply_command({create_vhost, Name}, #state {user = Username, node = Node}) ->
     ensure_wildcard_access(Username, ?MASTER_VHOST, configure),
     rpc_call(Node, rabbit_access_control, add_vhost, [list_to_binary(Name)]),
+    apply_privilege_list(Username, list_to_binary(Name), expand_privilege_list(all), <<".*">>),
     ok;
 apply_command({drop_vhost, Name}, #state {user = Username, node = Node}) ->
     ensure_wildcard_access(Username, ?MASTER_VHOST, configure),
