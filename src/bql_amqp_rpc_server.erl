@@ -41,7 +41,7 @@ init([]) ->
     link(Ch),
 
     #'queue.declare_ok'{} = amqp_channel:call(Ch, #'queue.declare'{queue = ?QueueName, durable = true}),
-    _ConsumerTag = amqp_channel:call(Ch, #'basic.consume'{queue = ?QueueName}),
+    _ConsumerTag = amqp_channel:subscribe(Ch, #'basic.consume'{queue = ?QueueName}, self()),
     {ok, #state { channel = Ch } }.
 
 handle_call(_,_,State) -> {reply,unhandled_call,State}.
