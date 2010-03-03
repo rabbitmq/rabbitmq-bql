@@ -36,7 +36,16 @@ start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
 init([]) ->
-    Connection = amqp_connection:start_direct(#amqp_params{}),
+    User = case application:get_env(rabbitmq_bql, user) of
+      undefined -> <<"guest">>;
+      {ok, U} -> list_to_binary(U)
+    end,
+    Password = case application:get_env(rabbitmq_bql, password) of
+      undefined -> <<"guest">>;
+      {ok, P} -> list_to_binary(P)
+    end,
+
+    Connection = amqp_connection:start_direct(#amqp_params{username = User, password = Password}),
     Ch = amqp_connection:open_channel(Connection),
     link(Ch),
 
