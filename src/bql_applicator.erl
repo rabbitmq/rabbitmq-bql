@@ -133,16 +133,14 @@ apply_command({revoke, Privilege, User}, #state {node = Node, user = Username, v
 % Queries
 apply_command({select, "exchanges", Fields, Modifiers}, #state {node = Node, user = Username, vhost = VHost}) ->
     ensure_wildcard_access(Username, VHost, read),
-    AllFieldList = [name, type, durable, auto_delete, arguments],
+    AllFieldList = rabbit_exchange:info_keys(),
     FieldList = validate_fields(AllFieldList, Fields),
     Exchanges = rpc_call(Node, rabbit_exchange, info_all, [VHost]),
     interpret_response(AllFieldList, FieldList, Exchanges, Modifiers);
 
 apply_command({select, "queues", Fields, Modifiers}, #state {node = Node, user = Username, vhost = VHost}) ->
     ensure_wildcard_access(Username, VHost, read),
-    AllFieldList = [name, durable, auto_delete, arguments, pid, messages_ready,
-                    messages_unacknowledged, messages_uncommitted, messages, acks_uncommitted,
-                    consumers, transactions, memory],
+    AllFieldList = rabbit_amqqueue:info_keys(),
     FieldList = validate_fields(AllFieldList, Fields),
     Queues = rpc_call(Node, rabbit_amqqueue, info_all, [VHost]),
     interpret_response(AllFieldList, FieldList, Queues, Modifiers);
