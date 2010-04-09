@@ -188,11 +188,8 @@ apply_command({post_message, X, RoutingKey, Msg}, #state { user = Username, vhos
     ExchangeName = rabbit_misc:r(VHost, exchange, list_to_binary(X)),
     ensure_resource_access(Username, ExchangeName, write),
     Exchange = rabbit_exchange:lookup_or_die(ExchangeName),
-    Content = rabbit_basic:build_content(#'P_basic'{}, list_to_binary(Msg)),
-    Message = #basic_message{exchange_name  = ExchangeName,
-                             routing_key    = list_to_binary(RoutingKey),
-                             content        = Content,
-                             persistent_key = none},
+    Message = rabbit_basic:message(ExchangeName, list_to_binary(RoutingKey),
+                                   #'P_basic'{}, list_to_binary(Msg)),
     {RoutingRes, _DeliveredQPids} =
                 rabbit_exchange:publish(
                   Exchange,
