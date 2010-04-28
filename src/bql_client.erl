@@ -35,7 +35,7 @@ connect() ->
   Password = list_to_binary(bql_utils:argument_or_default(password, "guest")),
   VHost = list_to_binary(bql_utils:argument_or_default(vhost, "/")),
   Host = bql_utils:argument_or_default(host, "localhost"),
-  Port = bql_utils:argument_or_default(port, ?PROTOCOL_PORT),
+  Port = list_to_integer(bql_utils:argument_or_default(port, integer_to_list(?PROTOCOL_PORT))),
   connect(Host, Port, Username, Password, VHost).
 
 %% Creates a connection to the Rabbit server that can subsequently be used
