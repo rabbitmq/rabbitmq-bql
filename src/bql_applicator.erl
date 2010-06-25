@@ -41,7 +41,7 @@ apply_commands(Commands, User, VHost) ->
 apply_command({create_queue, Name, Durable, Args}, #state {user = Username, vhost = VHost}) ->
     QueueName = rabbit_misc:r(VHost, queue, list_to_binary(Name)),
     ensure_resource_access(Username, QueueName, configure),
-    rabbit_amqqueue:declare(QueueName, Durable, false, Args),
+    rabbit_amqqueue:declare(QueueName, Durable, false, Args, none),
     ok;
 apply_command({drop_queue, Name}, #state {user = Username, vhost = VHost}) ->
     QueueName = rabbit_misc:r(VHost, queue, list_to_binary(Name)),
@@ -78,7 +78,8 @@ apply_command({create_exchange, Name, Type, Durable, Args}, #state {user = Usern
                rabbit_exchange:declare(ExchangeName, CheckedType,
                                        Durable, false, Args)
        end,
-    ok = rabbit_exchange:assert_type(X, CheckedType),
+    ok = rabbit_exchange:assert_equivalence(X, CheckedType, Durable,
+                                            false, Args),
     ok;
 apply_command({drop_exchange, Name}, #state {user = Username, vhost = VHost}) ->
     ExchangeName = rabbit_misc:r(VHost, exchange, list_to_binary(Name)),
@@ -112,11 +113,11 @@ apply_command({drop_vhost, Name}, #state {user = Username, node = Node}) ->
 
 % Binding Management
 apply_command({create_binding, {X, Q, RoutingKey}, Args}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_exchange:add_binding/4, 
+    binding_action(fun rabbit_exchange:add_binding/5, 
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), Args, Username, VHost);
 apply_command({drop_binding, {X, Q, RoutingKey}}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_exchange:delete_binding/4, 
+    binding_action(fun rabbit_exchange:delete_binding/5, 
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), <<"">>, Username, VHost);
 
@@ -457,7 +458,7 @@ binding_action(Fun, ExchangeNameBin, QueueNameBin, RoutingKey, Arguments, Userna
     ensure_resource_access(Username, QueueName, write),
     ExchangeName = rabbit_misc:r(VHost, exchange, ExchangeNameBin),
     ensure_resource_access(Username, ExchangeName, read),
-    case Fun(ExchangeName, QueueName, RoutingKey, Arguments) of
+    case Fun(ExchangeName, QueueName, RoutingKey, Arguments, fun (_X, _Q) -> ok end) of
         {error, exchange_not_found} ->
             lists:flatten(io_lib:format("~s not found", [rabbit_misc:rs(ExchangeName)]));
         {error, queue_not_found} ->
