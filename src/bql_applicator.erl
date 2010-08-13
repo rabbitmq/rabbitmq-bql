@@ -433,7 +433,7 @@ apply_privilege_list(User, VHost, PrivilegeList, Regex) ->
 retrieve_privileges(User, VHost) ->
     Permissions = rabbit_access_control:list_vhost_permissions(VHost),
     UserPermissions = [[{configure, ConfigureRE}, {write, WriteRE}, {read, ReadRE}]
-        || {PermUser, ConfigureRE, WriteRE, ReadRE} <- Permissions, User =:= PermUser],
+        || {PermUser, ConfigureRE, WriteRE, ReadRE, _Scope} <- Permissions, User =:= PermUser],
     case length(UserPermissions) of
         0 -> [{configure, <<"">>}, {write, <<"">>}, {read, <<"">>}];
         _ -> lists:nth(1, UserPermissions)

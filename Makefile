@@ -26,7 +26,7 @@ $(DIST_DIR)/$(CLIENT_PACKAGE): $(TARGETS) $(wildcard $(SCRIPTS_DIR))
 	rm -rf $(CLIENT_PACKAGE_DIR)
 	mkdir -p $(DIST_DIR)
 	mkdir -p $(CLIENT_PACKAGE_DIR)/ebin
-	cp $(EBIN_DIR)/* $(foreach DEP_NAME, $(CLIENT_DEPS), $(PRIV_DEPS_DIR)/$(DEP_NAME)/ebin/*) $(CLIENT_PACKAGE_DIR)/ebin
+	cp $(EBIN_DIR)/* $(foreach DEP_NAME, $(CLIENT_DEPS), $(PRIV_DEPS_DIR)/$(DEP_NAME)*/ebin/*) $(CLIENT_PACKAGE_DIR)/ebin
 	cp $(SCRIPTS_DIR)/* $(CLIENT_PACKAGE_DIR)
 	
 	(cd $(CLIENT_PACKAGE_DIR); zip -r ../../$@ *)
