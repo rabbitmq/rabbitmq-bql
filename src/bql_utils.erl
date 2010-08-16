@@ -20,7 +20,7 @@
 %%
 -module(bql_utils).
 
--export([convert_to_string/1, makenode/1]).
+-export([convert_to_string/1, makenode/1, argument_or_default/2]).
 
 convert_to_string(Value) when is_list(Value) ->
     Value;
@@ -42,4 +42,10 @@ nodeparts(NodeStr) ->
         {Prefix, []}     -> {_, Suffix} = nodeparts(node()),
                             {Prefix, Suffix};
         {Prefix, Suffix} -> {Prefix, tl(Suffix)}
+    end.
+    
+argument_or_default(Flag, Default) ->
+    case init:get_argument(Flag) of
+        {ok, [[Val]]} -> Val;
+        _ -> Default
     end.

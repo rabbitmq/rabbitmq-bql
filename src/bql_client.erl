@@ -20,109 +20,45 @@
 %%
 -module(bql_client).
 
-% Client application for executing BDL commands.
+-export([connect/0, connect/5, close/1, execute/2]).
 
--export([start/0, stop/0]).
+-include_lib("amqp_client/include/amqp_client.hrl").
 
 % Record defining the context in which BQL commands are executed
--record(client_ctx, {username, password, vhost}).
+-record(client_ctx, {username, password, vhost, connection, rpc_client}).
 
-start() ->
-    Username = list_to_binary(argument_or_default(username, "guest")),
-    Password = list_to_binary(argument_or_default(password, "guest")),
-    VHost = list_to_binary(argument_or_default(vhost, "/")),
-    ClientContext = #client_ctx{username = Username, password = Password, vhost = VHost},
+%% Creates a connection to the Rabbit server that can subsequently be used
+%% to issue BQL requests. Uses init arguments to determine connection
+%% parameters.
+connect() ->
+  Username = list_to_binary(bql_utils:argument_or_default(username, "guest")),
+  Password = list_to_binary(bql_utils:argument_or_default(password, "guest")),
+  VHost = list_to_binary(bql_utils:argument_or_default(vhost, "/")),
+  Host = bql_utils:argument_or_default(host, "localhost"),
+  Port = list_to_integer(bql_utils:argument_or_default(port, integer_to_list(?PROTOCOL_PORT))),
+  connect(Host, Port, Username, Password, VHost).
 
-    case init:get_argument(execute) of
-      error ->
-         execute_shell(ClientContext),
-         halt();
-      {ok, BQL} ->
-         case apply_bql_file(ClientContext, BQL) of
-           ok    -> halt();
-           error -> halt(1)
-         end;
-      _ ->
-         io:fwrite("Too many arguments supplied. Provide a BQL file that should be applied.~n"),
-         halt()
-    end.
-
-stop() ->
-    ok.
-
-argument_or_default(Flag, Default) ->
-  case init:get_argument(Flag) of
-    {ok, [[Val]]} -> Val;
-    _ -> Default
-  end.
-
-execute_shell(ClientContext) ->
-    case run_command(ClientContext) of
-        exit -> ok;
-        _    -> execute_shell(ClientContext)
-    end.
-
-run_command(ClientContext) ->
-    Line = io:get_line("BQL> "),
-    case Line of
-        eof      -> exit;
-        "exit\n" -> exit;
-        _        -> execute_block(ClientContext, Line), ok
-    end.
-      
-
-apply_bql_file(ClientContext, BQL) ->
-    case filelib:is_file(BQL) of
-        false ->
-            io:fwrite("Provided BQL file does not exist!~n"),
-            error;
-        true ->
-            {ok, Contents} = file:read_file(BQL),
-            execute_block(ClientContext, binary_to_list(Contents))
-    end.
-
-execute_block(#client_ctx { username = User, password = Password, vhost = VHost }, Contents) ->
-    case rpc:call(bql_utils:makenode("rabbit"), bql_server, send_command, 
-                    [User, Password, VHost, <<"text/bql">>, Contents]) of	
-        {ok, Result}    -> format_result(Result);
-        {error, Reason} -> io:format("BQL execution failed:~n  ~s~n", [Reason])
-    end.
-
-format_result(Result) ->
-    [format_result_block(Item) || Item <- Result],
-    ok.
-
-format_result_block({Headers, Rows}) when is_list(Headers), is_list(Rows) ->
-    %% Convert the content of all the rows to strings
-    StringifiedRows = [[bql_utils:convert_to_string(Cell) || Cell <- Row] || Row <- Rows],
-
-    %% Work through the items and headers, and find the longest item
-    CountedHeaders = lists:zip(Headers, lists:seq(1, length(Headers))),
-    Widths = [measure_column(Header, Position, StringifiedRows) || {Header, Position} <- CountedHeaders],
-
-    %% Output the header then inside dividers
-    Divider = ["-" || _ <- lists:seq(1, lists:sum(Widths) + 3*length(Widths) + 1)] ++ "~n",
-    io:fwrite(Divider),
-    output_row([atom_to_list(H) || H <- Headers], Widths),
-    io:fwrite(Divider),
-
-    [output_row(Row, Widths) || Row <- StringifiedRows],
-    io:fwrite("~n"),
-    ok;
-format_result_block(Result) ->
-    io:format("~p~n", [Result]),
-    ok.
-
-measure_column(Header, Position, Items) ->
-    lists:max([length(X) || X <- [atom_to_list(Header)] ++ [lists:nth(Position, Row) || Row <- Items]]).
-output_row(Items, Widths) ->
-    WidthItems = lists:zip(Items, Widths),
-    [io:format("| ~s ", [widen(Item, Width)]) || {Item, Width} <- WidthItems],
-    io:fwrite("|~n").
-
-widen(Item, Width) ->
-    Extra = Width - length(Item),
-    case Extra of
-        0 -> Item;
-        _ -> Item ++ [" " || _ <- lists:seq(1, Extra)]
-    end.
+%% Creates a connection to the Rabbit server that can subsequently be used
+%% to issue BQL requests.
+connect(Host, Port, Username, Password, VHost) ->
+	% Open a conenction and wire a RPC client to it
+	Connection = amqp_connection:start_network(#amqp_params{
+        username     = Username,
+        password     = Password,
+        virtual_host = <<"/">>,  %% bql.query is in the default vhost
+        host         = Host,
+        port         = Port}),
+    Client = bql_amqp_rpc_client:start(Connection, <<"bql.query">>),
+    #client_ctx{username = Username, password = Password, vhost = VHost,
+	            connection = Connection, rpc_client = Client}.
+				
+%% Disconnects the BQL client and frees up any resources associated with it
+close(#client_ctx { connection = Connection, rpc_client = Client }) ->
+  bql_amqp_rpc_client:stop(Client),
+  amqp_connection:close(Connection).
+				
+%% Executes the given BQL request on the connected server
+execute(#client_ctx { username = User, password = Password, vhost = VHost, rpc_client = Client }, Contents) ->
+  Request = [{user, User}, {password, Password}, {vhost, VHost}, {query_text, Contents}],
+	Res = bql_amqp_rpc_client:call(Client, <<"application/bert">>, term_to_binary(Request), 500),
+	binary_to_term(Res).

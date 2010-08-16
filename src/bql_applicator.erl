@@ -26,21 +26,22 @@
 -include_lib("rabbit_common/include/rabbit_framing.hrl").
 
 -define(RPC_TIMEOUT, 30000).
+-define(MASTER_VHOST, <<"/">>).
 
 -record(state, {node, user, vhost}).
 
 apply_commands(Commands, User, VHost) ->
     % Create a connection to the Rabbit node
-    Node = rabbit_misc:makenode("rabbit"),
+    Node = rabbit_misc:makenode(node()),
 
     {ok, [catch apply_command(Command, #state {node = Node, user = User, vhost = VHost}) 
             || Command <- Commands]}.
-            
+                                          
 % Queue Management
 apply_command({create_queue, Name, Durable, Args}, #state {user = Username, vhost = VHost}) ->
     QueueName = rabbit_misc:r(VHost, queue, list_to_binary(Name)),
     ensure_resource_access(Username, QueueName, configure),
-    rabbit_amqqueue:declare(QueueName, Durable, false, Args),
+    rabbit_amqqueue:declare(QueueName, Durable, false, Args, none),
     ok;
 apply_command({drop_queue, Name}, #state {user = Username, vhost = VHost}) ->
     QueueName = rabbit_misc:r(VHost, queue, list_to_binary(Name)),
@@ -77,7 +78,8 @@ apply_command({create_exchange, Name, Type, Durable, Args}, #state {user = Usern
                rabbit_exchange:declare(ExchangeName, CheckedType,
                                        Durable, false, Args)
        end,
-    ok = rabbit_exchange:assert_type(X, CheckedType),
+    ok = rabbit_exchange:assert_equivalence(X, CheckedType, Durable,
+                                            false, Args),
     ok;
 apply_command({drop_exchange, Name}, #state {user = Username, vhost = VHost}) ->
     ExchangeName = rabbit_misc:r(VHost, exchange, list_to_binary(Name)),
@@ -90,81 +92,92 @@ apply_command({drop_exchange, Name}, #state {user = Username, vhost = VHost}) ->
     end;
 
 % User Management
-apply_command({create_user, Name, Password}, #state {node = Node}) ->
+apply_command({create_user, Name, Password}, #state {user = Username, node = Node}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, configure),
     rpc_call(Node, rabbit_access_control, add_user, [list_to_binary(Name), list_to_binary(Password)]),
     ok;
-apply_command({drop_user, Name}, #state {node = Node}) ->
+apply_command({drop_user, Name}, #state {user = Username, node = Node}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, configure),
     rpc_call(Node, rabbit_access_control, delete_user, [list_to_binary(Name)]),
     ok;
 
 % VHost Management
-apply_command({create_vhost, Name}, #state {node = Node}) ->
+apply_command({create_vhost, Name}, #state {user = Username, node = Node}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, configure),
     rpc_call(Node, rabbit_access_control, add_vhost, [list_to_binary(Name)]),
     ok;
-apply_command({drop_vhost, Name}, #state {node = Node}) ->
+apply_command({drop_vhost, Name}, #state {user = Username, node = Node}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, configure),
     rpc_call(Node, rabbit_access_control, delete_vhost, [list_to_binary(Name)]),
     ok;
 
 % Binding Management
 apply_command({create_binding, {X, Q, RoutingKey}, Args}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_exchange:add_binding/4, 
+    binding_action(fun rabbit_exchange:add_binding/5, 
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), Args, Username, VHost);
 apply_command({drop_binding, {X, Q, RoutingKey}}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_exchange:delete_binding/4, 
+    binding_action(fun rabbit_exchange:delete_binding/5, 
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), <<"">>, Username, VHost);
 
 % Privilege Management
-apply_command({grant, Privilege, Regex, User}, #state {node = Node, vhost = VHost}) ->
+apply_command({grant, Privilege, Regex, User}, #state {node = Node, user = Username, vhost = VHost}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, configure),
     PrivilegeList = expand_privilege_list(Privilege),
-    apply_privilege_list(Node, list_to_binary(User), VHost, PrivilegeList, list_to_binary(Regex));
-apply_command({revoke, Privilege, User}, #state {node = Node, vhost = VHost}) ->
+    apply_privilege_list(list_to_binary(User), VHost, PrivilegeList, list_to_binary(Regex));
+apply_command({revoke, Privilege, User}, #state {node = Node, user = Username, vhost = VHost}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, configure),
     PrivilegeList = expand_privilege_list(Privilege),
-    apply_privilege_list(Node, list_to_binary(User), VHost, PrivilegeList, <<"">>);
+    apply_privilege_list(list_to_binary(User), VHost, PrivilegeList, <<"">>);
   
 % Queries
-apply_command({select, "exchanges", Fields, Modifiers}, #state {node = Node, vhost = VHost}) ->
-    AllFieldList = [name, type, durable, auto_delete, arguments],
+apply_command({select, "exchanges", Fields, Modifiers}, #state {node = Node, user = Username, vhost = VHost}) ->
+    ensure_wildcard_access(Username, VHost, read),
+    AllFieldList = rabbit_exchange:info_keys(),
     FieldList = validate_fields(AllFieldList, Fields),
     Exchanges = rpc_call(Node, rabbit_exchange, info_all, [VHost]),
     interpret_response(AllFieldList, FieldList, Exchanges, Modifiers);
 
-apply_command({select, "queues", Fields, Modifiers}, #state {node = Node, vhost = VHost}) ->
-    AllFieldList = [name, durable, auto_delete, arguments, pid, messages_ready,
-                    messages_unacknowledged, messages_uncommitted, messages, acks_uncommitted,
-                    consumers, transactions, memory],
+apply_command({select, "queues", Fields, Modifiers}, #state {node = Node, user = Username, vhost = VHost}) ->
+    ensure_wildcard_access(Username, VHost, read),
+    AllFieldList = rabbit_amqqueue:info_keys(),
     FieldList = validate_fields(AllFieldList, Fields),
     Queues = rpc_call(Node, rabbit_amqqueue, info_all, [VHost]),
     interpret_response(AllFieldList, FieldList, Queues, Modifiers);
 
-apply_command({select, "bindings", Fields, Modifiers}, #state {node = Node, vhost = VHost}) ->
+apply_command({select, "bindings", Fields, Modifiers}, #state {node = Node, user = Username, vhost = VHost}) ->
+    ensure_wildcard_access(Username, VHost, read),
     AllFieldList = [exchange_name, queue_name, routing_key, args],
     FieldList = validate_fields(AllFieldList, Fields),
     Bindings = rpc_call(Node, rabbit_exchange, list_bindings, [VHost]),
     interpret_response(AllFieldList, FieldList, Bindings, Modifiers);
 
-apply_command({select, "users", Fields, Modifiers}, #state {node = Node}) ->
+apply_command({select, "users", Fields, Modifiers}, #state {node = Node, user = Username}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, read),
     AllFieldList = [name],
     FieldList = validate_fields(AllFieldList, Fields),
     Response = rpc_call(Node, rabbit_access_control, list_users, []),
     Users = [[binary_to_list(User)] || User <- Response],
     interpret_response(AllFieldList, FieldList, Users, Modifiers);
 
-apply_command({select, "vhosts", Fields, Modifiers}, #state {node = Node}) ->
+apply_command({select, "vhosts", Fields, Modifiers}, #state {node = Node, user = Username}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, read),
     AllFieldList = [name],
     FieldList = validate_fields(AllFieldList, Fields),
     Response = rpc_call(Node, rabbit_access_control, list_vhosts, []),
     VHosts = [[{name, binary_to_list(User)}] || User <- Response],
     interpret_response(AllFieldList, FieldList, VHosts, Modifiers);
 
-apply_command({select, "permissions", Fields, Modifiers}, #state {node = Node, vhost = VHost}) ->
+apply_command({select, "permissions", Fields, Modifiers}, #state {node = Node, user = Username, vhost = VHost}) ->
+    ensure_wildcard_access(Username, VHost, read),
     AllFieldList = [username,configure_perm,write_perm,read_perm],
     FieldList = validate_fields(AllFieldList, Fields),
     Permissions = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [VHost]),
     interpret_response(AllFieldList, FieldList, Permissions, Modifiers);
 
-apply_command({select, "connections", Fields, Modifiers}, #state {node = Node}) ->
+apply_command({select, "connections", Fields, Modifiers}, #state {node = Node, user = Username}) ->
+    ensure_wildcard_access(Username, ?MASTER_VHOST, read),
     AllFieldList = [pid, address, port, peer_address, peer_port, recv_oct, recv_cnt, send_oct, send_cnt,
                     send_pend, state, channels, user, vhost, timeout, frame_max],
     FieldList = validate_fields(AllFieldList, Fields),
@@ -176,11 +189,8 @@ apply_command({post_message, X, RoutingKey, Msg}, #state { user = Username, vhos
     ExchangeName = rabbit_misc:r(VHost, exchange, list_to_binary(X)),
     ensure_resource_access(Username, ExchangeName, write),
     Exchange = rabbit_exchange:lookup_or_die(ExchangeName),
-    Content = rabbit_basic:build_content(#'P_basic'{}, list_to_binary(Msg)),
-    Message = #basic_message{exchange_name  = ExchangeName,
-                             routing_key    = list_to_binary(RoutingKey),
-                             content        = Content,
-                             persistent_key = none},
+    Message = rabbit_basic:message(ExchangeName, list_to_binary(RoutingKey),
+                                   #'P_basic'{}, list_to_binary(Msg)),
     {RoutingRes, _DeliveredQPids} =
                 rabbit_exchange:publish(
                   Exchange,
@@ -402,9 +412,9 @@ expand_privilege_list(all) ->
 expand_privilege_list(X) ->
     [X].
 
-apply_privilege_list(Node, User, VHost, PrivilegeList, Regex) ->
+apply_privilege_list(User, VHost, PrivilegeList, Regex) ->
     %% Retrieve the old privilege structure
-    Current = retrieve_privileges(Node, User, VHost),
+    Current = retrieve_privileges(User, VHost),
 
     %% Update each privilege detailed in the privilege spec
     NewPrivs = [case X of
@@ -417,11 +427,11 @@ apply_privilege_list(Node, User, VHost, PrivilegeList, Regex) ->
     [NewConfigure,NewWrite,NewRead] = NewPrivs,
 
     % Set the permissions
-    rpc_call(Node, rabbit_access_control, set_permissions, [User, VHost, NewConfigure, NewWrite, NewRead]),
+    rabbit_access_control:set_permissions(User, VHost, NewConfigure, NewWrite, NewRead),
     ok.
 
-retrieve_privileges(Node, User, VHost) ->
-    Permissions = rpc_call(Node, rabbit_access_control, list_vhost_permissions, [VHost]),
+retrieve_privileges(User, VHost) ->
+    Permissions = rabbit_access_control:list_vhost_permissions(VHost),
     UserPermissions = [[{configure, ConfigureRE}, {write, WriteRE}, {read, ReadRE}]
         || {PermUser, ConfigureRE, WriteRE, ReadRE} <- Permissions, User =:= PermUser],
     case length(UserPermissions) of
@@ -432,12 +442,23 @@ retrieve_privileges(Node, User, VHost) ->
 ensure_resource_access(Username, Resource, Perm) ->
     rabbit_access_control:check_resource_access(Username, Resource, Perm).
     
+ensure_wildcard_access(Username, VHost, Perm) ->
+    VHostPerms = retrieve_privileges(Username, VHost),
+    Priv = proplists:get_value(Perm, VHostPerms, <<"">>),
+    case Priv == <<".*">> of
+        true -> ok;
+        false -> 
+            rabbit_misc:protocol_error(access_refused, 
+                "wildcard access to ~p on vhost ~s refused for user '~s'",
+                [Perm, VHost, Username])
+    end.
+    
 binding_action(Fun, ExchangeNameBin, QueueNameBin, RoutingKey, Arguments, Username, VHost) ->
     QueueName = rabbit_misc:r(VHost, queue, QueueNameBin),
     ensure_resource_access(Username, QueueName, write),
     ExchangeName = rabbit_misc:r(VHost, exchange, ExchangeNameBin),
     ensure_resource_access(Username, ExchangeName, read),
-    case Fun(ExchangeName, QueueName, RoutingKey, Arguments) of
+    case Fun(ExchangeName, QueueName, RoutingKey, Arguments, fun (_X, _Q) -> ok end) of
         {error, exchange_not_found} ->
             lists:flatten(io_lib:format("~s not found", [rabbit_misc:rs(ExchangeName)]));
         {error, queue_not_found} ->

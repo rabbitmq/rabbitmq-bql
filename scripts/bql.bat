@@ -36,5 +36,5 @@ if not exist "%ERLANG_HOME%\bin\erl.exe" (
     exit /B
 )
 
-"%ERLANG_HOME%\bin\erl.exe" -pa "%~dp0..\ebin" -noshell -hidden -sname amqpbdl -s bql_client -extra %*
+"%ERLANG_HOME%\bin\erl.exe" -pa "%~dp0ebin" -kernel error_logger silent -noshell -hidden -sname amqpbql -s bql_shell -extra %*
 

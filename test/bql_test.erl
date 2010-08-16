@@ -97,9 +97,7 @@ create_route_to_bad_queue_test() ->
 create_route_from_nondurable_exchange_to_durable_queue_test() ->
     [ok] = execute("create exchange nondurableexchange"),
     [ok] = execute("create durable queue mydurablequeue"),
-    ?assertEqual(["Durability settings of " ++
-                  "queue 'mydurablequeue' in vhost '/' " ++
-                  "incompatible with exchange 'nondurableexchange' in vhost '/'"],
+    ?assertEqual([ok],
                  execute("create route from nondurableexchange to mydurablequeue")).
 
 select_permission_with_where_clause_not_in_result_test() ->
