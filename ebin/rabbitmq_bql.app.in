@@ -1,6 +1,6 @@
 {application, rabbitmq_bql,
  [{description, "RabbitMQ Broker Query Language"},
-  {vsn, "0.01"},
+  {vsn, "%%VSN%%"},
   {modules, [
     rabbitmq_bql,
     rabbitmq_bql_sup,
