@@ -1,4 +1,5 @@
 PACKAGE=rabbitmq-bql
+APPNAME=rabbitmq_bql
 DEPS=rabbitmq-server rabbitmq-erlang-client erlang-rfc4627
 CLIENT_DEPS=rabbit_common amqp_client
 GENERATED_SOURCES=command_lexer command_parser
