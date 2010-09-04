@@ -117,7 +117,7 @@ apply_command({create_binding, {X, Q, RoutingKey}, Args}, #state {user = Usernam
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), Args, Username, VHost);
 apply_command({drop_binding, {X, Q, RoutingKey}}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_binding:delete/5,
+    binding_action(fun rabbit_binding:remove/5,
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), <<"">>, Username, VHost);
 
