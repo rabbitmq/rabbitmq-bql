@@ -113,11 +113,11 @@ apply_command({drop_vhost, Name}, #state {user = Username, node = Node}) ->
 
 % Binding Management
 apply_command({create_binding, {X, Q, RoutingKey}, Args}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_exchange:add_binding/5, 
+    binding_action(fun rabbit_binding:add/5,
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), Args, Username, VHost);
 apply_command({drop_binding, {X, Q, RoutingKey}}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_exchange:delete_binding/5, 
+    binding_action(fun rabbit_binding:remove/5,
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), <<"">>, Username, VHost);
 
@@ -150,7 +150,7 @@ apply_command({select, "bindings", Fields, Modifiers}, #state {node = Node, user
     ensure_wildcard_access(Username, VHost, read),
     AllFieldList = [exchange_name, queue_name, routing_key, args],
     FieldList = validate_fields(AllFieldList, Fields),
-    Bindings = rpc_call(Node, rabbit_exchange, list_bindings, [VHost]),
+    Bindings = rpc_call(Node, rabbit_binding, list, [VHost]),
     interpret_response(AllFieldList, FieldList, Bindings, Modifiers);
 
 apply_command({select, "users", Fields, Modifiers}, #state {node = Node, user = Username}) ->
