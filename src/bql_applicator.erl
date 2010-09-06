@@ -113,11 +113,11 @@ apply_command({drop_vhost, Name}, #state {user = Username, node = Node}) ->
 
 % Binding Management
 apply_command({create_binding, {X, Q, RoutingKey}, Args}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_binding:add/5,
+    binding_action(fun rabbit_binding:add/1,
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), Args, Username, VHost);
 apply_command({drop_binding, {X, Q, RoutingKey}}, #state {user = Username, vhost = VHost}) ->
-    binding_action(fun rabbit_binding:remove/5,
+    binding_action(fun rabbit_binding:remove/1,
                    list_to_binary(X), list_to_binary(Q),
                    list_to_binary(RoutingKey), <<"">>, Username, VHost);
 
@@ -148,9 +148,9 @@ apply_command({select, "queues", Fields, Modifiers}, #state {node = Node, user =
 
 apply_command({select, "bindings", Fields, Modifiers}, #state {node = Node, user = Username, vhost = VHost}) ->
     ensure_wildcard_access(Username, VHost, read),
-    AllFieldList = [exchange_name, queue_name, routing_key, args],
+    AllFieldList = rabbit_binding:info_keys(),
     FieldList = validate_fields(AllFieldList, Fields),
-    Bindings = rpc_call(Node, rabbit_binding, list, [VHost]),
+    Bindings = rpc_call(Node, rabbit_binding, info_all, [VHost]),
     interpret_response(AllFieldList, FieldList, Bindings, Modifiers);
 
 apply_command({select, "users", Fields, Modifiers}, #state {node = Node, user = Username}) ->
@@ -458,7 +458,10 @@ binding_action(Fun, ExchangeNameBin, QueueNameBin, RoutingKey, Arguments, Userna
     ensure_resource_access(Username, QueueName, write),
     ExchangeName = rabbit_misc:r(VHost, exchange, ExchangeNameBin),
     ensure_resource_access(Username, ExchangeName, read),
-    case Fun(ExchangeName, QueueName, RoutingKey, Arguments, fun (_X, _Q) -> ok end) of
+    case Fun(#binding{exchange_name = ExchangeName,
+                      queue_name    = QueueName,
+                      key           = RoutingKey,
+                      args          = Arguments}) of
         {error, exchange_not_found} ->
             lists:flatten(io_lib:format("~s not found", [rabbit_misc:rs(ExchangeName)]));
         {error, queue_not_found} ->
