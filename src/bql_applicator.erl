@@ -155,10 +155,12 @@ apply_command({select, "bindings", Fields, Modifiers}, #state {node = Node, user
 
 apply_command({select, "users", Fields, Modifiers}, #state {node = Node, user = Username}) ->
     ensure_wildcard_access(Username, ?MASTER_VHOST, read),
-    AllFieldList = [name],
+    AllFieldList = [name, is_admin],
     FieldList = validate_fields(AllFieldList, Fields),
     Response = rpc_call(Node, rabbit_access_control, list_users, []),
-    Users = [[binary_to_list(User)] || User <- Response],
+    Users = [[{name, binary_to_list(Username)},
+              {is_admin, IsAdmin}] || #user{username = Username,
+                                            is_admin = IsAdmin} <- Response],
     interpret_response(AllFieldList, FieldList, Users, Modifiers);
 
 apply_command({select, "vhosts", Fields, Modifiers}, #state {node = Node, user = Username}) ->
