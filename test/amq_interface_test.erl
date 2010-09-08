@@ -40,9 +40,10 @@ submit_query_against_non_existant_object_test() ->
     ?assertEqual(<<"{\"success\":true,\"messages\":[\"Unknown entity something specified to query\"]}">>, Response).
 
 send_request(Content) ->
-    Connection = Connection = amqp_connection:start_direct(#amqp_params{}),
+    {ok, Connection} = amqp_connection:start(direct, #amqp_params{}),
     Client = bql_amqp_rpc_client:start(Connection, <<"bql.query">>),
     Res = bql_amqp_rpc_client:call(Client, <<"application/json">>,
                                    list_to_binary("{\"query\":\"" ++ Content ++ "\"}"), 500),
     amqp_connection:close(Connection),
     Res.
+
