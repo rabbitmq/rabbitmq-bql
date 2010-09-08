@@ -159,8 +159,7 @@ apply_command({select, "users", Fields, Modifiers}, #state {node = Node, user = 
     FieldList = validate_fields(AllFieldList, Fields),
     Response = rpc_call(Node, rabbit_access_control, list_users, []),
     Users = [[{name, binary_to_list(Username)},
-              {is_admin, IsAdmin}] || #user{username = Username,
-                                            is_admin = IsAdmin} <- Response],
+              {is_admin, IsAdmin}] || {Username, IsAdmin} <- Response],
     interpret_response(AllFieldList, FieldList, Users, Modifiers);
 
 apply_command({select, "vhosts", Fields, Modifiers}, #state {node = Node, user = Username}) ->
