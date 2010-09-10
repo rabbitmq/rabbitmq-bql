@@ -42,7 +42,7 @@ connect() ->
 %% to issue BQL requests.
 connect(Host, Port, Username, Password, VHost) ->
 	% Open a conenction and wire a RPC client to it
-	Connection = amqp_connection:start_network(#amqp_params{
+	{ok, Connection} = amqp_connection:start(network, #amqp_params{
         username     = Username,
         password     = Password,
         virtual_host = <<"/">>,  %% bql.query is in the default vhost

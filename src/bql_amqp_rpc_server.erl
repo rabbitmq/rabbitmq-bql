@@ -45,8 +45,8 @@ init([]) ->
       {ok, P} -> list_to_binary(P)
     end,
 
-    Connection = amqp_connection:start_direct(#amqp_params{username = User, password = Password}),
-    Ch = amqp_connection:open_channel(Connection),
+    {ok, Connection} = amqp_connection:start(direct, #amqp_params{username = User, password = Password}),
+    {ok, Ch} = amqp_connection:open_channel(Connection),
     link(Ch),
 
     #'queue.declare_ok'{} = amqp_channel:call(Ch, #'queue.declare'{queue = ?QueueName, durable = true}),
