@@ -5,9 +5,7 @@ CLIENT_DEPS=rabbit_common amqp_client
 GENERATED_SOURCES=command_lexer command_parser
 SCRIPTS_DIR=scripts
 EXTRA_PACKAGE_DIRS=$(SCRIPTS_DIR)
-TEST_APPS=amqp_client rabbitmq_bql
 TEST_COMMANDS=command_parser_test:test() bql_test:test() amq_interface_test:test() bql_client_test:test()
-START_RABBIT_IN_TESTS=true
 CLIENT_PACKAGE=rabbitmq-bql-client.zip
 EXTRA_PACKAGE_ARTIFACTS=$(CLIENT_PACKAGE)
 
