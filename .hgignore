@@ -6,7 +6,9 @@ src/command_parser.erl
 dist
 tmp
 test_ebin
+deps.mk
 
 syntax: regexp
 ^build/
 ^dist/
+^ebin/rabbitmq_bql.app$
