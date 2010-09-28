@@ -5,9 +5,7 @@ CLIENT_DEPS:=rabbit_common amqp_client
 GENERATED_ERLS:=$$($(PACKAGE_DIR)_SOURCE_DIR)/command_lexer.erl $$($(PACKAGE_DIR)_SOURCE_DIR)/command_parser.erl
 SCRIPTS_DIR:=$(PACKAGE_DIR)/scripts
 EXTRA_PACKAGE_DIRS:=$(SCRIPTS_DIR)
-TEST_APPS:=amqp_client rabbitmq_bql
 TEST_COMMANDS:=command_parser_test:test() bql_test:test() amq_interface_test:test() bql_client_test:test()
-START_RABBIT_IN_TESTS:=true
 CLIENT_PACKAGE:=$(PACKAGE_DIR)/$(DIST_DIR)/rabbitmq-bql-client
 EXTRA_TARGETS:=$(CLIENT_PACKAGE).zip
 
