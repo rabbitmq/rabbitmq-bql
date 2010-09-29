@@ -1,3 +1,5 @@
+RELEASABLE:=true
+
 SOURCE_ERLS:=$$(filter-out %/leex.erl,$$(wildcard $$($(PACKAGE_DIR)_SOURCE_DIR)/*.erl))
 APP_NAME:=rabbitmq_bql
 DEPS:=rabbitmq-server rabbitmq-erlang-client erlang-rfc4627-wrapper
