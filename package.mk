@@ -1,8 +1,8 @@
-SOURCE_ERLS:=$$(filter-out %/leex.erl,$$(wildcard $$($(PACKAGE_DIR)_SOURCE_DIR)/*.erl))
+SOURCE_ERLS:=$(filter-out %/leex.erl,$(wildcard $(SOURCE_DIR)/*.erl))
 APP_NAME:=rabbitmq_bql
 DEPS:=rabbitmq-server rabbitmq-erlang-client erlang-rfc4627-wrapper
 CLIENT_DEPS:=rabbit_common amqp_client
-GENERATED_ERLS:=$$($(PACKAGE_DIR)_SOURCE_DIR)/command_lexer.erl $$($(PACKAGE_DIR)_SOURCE_DIR)/command_parser.erl
+GENERATED_ERLS:=$(SOURCE_DIR)/command_lexer.erl $(SOURCE_DIR)/command_parser.erl
 SCRIPTS_DIR:=$(PACKAGE_DIR)/scripts
 EXTRA_PACKAGE_DIRS:=$(SCRIPTS_DIR)
 TEST_COMMANDS:=command_parser_test:test() bql_test:test() amq_interface_test:test() bql_client_test:test()
