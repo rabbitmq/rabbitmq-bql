@@ -1,3 +1,0 @@
-select * from exchanges;
-select * from queues;
-select name from exchanges;

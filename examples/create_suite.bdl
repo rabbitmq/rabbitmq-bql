@@ -1,7 +1,0 @@
-create durable exchange 'ArchivesEx';
-create durable queue 'ArchivesQ';
-create route from 'ArchivesEx' to 'ArchivesQ';
-
-create durable exchange 'ArchivesEx2';
-create durable queue 'ArchivesQ2';
-create route from 'ArchivesEx2' to 'ArchivesQ2' when routing_key is 'Hello World';
